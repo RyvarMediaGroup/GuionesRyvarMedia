@@ -4,448 +4,784 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ryvar — Generador de Guiones</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --blanco: #FFFFFF;
-    --negro: #0a0a0a;
-    --dorado: #B59A72;
-    --dorado-sat: #C4A55A;
-    --gris-medio: #1a1a1a;
-    --gris-borde: #2a2a2a;
-    --texto-dim: #666666;
-    --verde: #2ecc71;
-    --rojo: #e05555;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--negro); color: var(--blanco); font-family: 'Montserrat', sans-serif; min-height: 100vh; overflow-x: hidden; }
+:root {
+  --bg:          #0a0a0a;
+  --surface:     rgba(255,255,255,0.05);
+  --surface-2:   rgba(255,255,255,0.08);
+  --border:      rgba(255,255,255,0.1);
+  --accent:      #7C3AED;
+  --accent-l:    #A855F7;
+  --grad:        linear-gradient(135deg,#7C3AED,#A855F7);
+  --green:       #22C55E;
+  --red:         #EF4444;
+  --text:        #F1F5F9;
+  --muted:       #64748B;
+  --r:           14px;
+  --r-sm:        8px;
+  --history-h:   86px;
+  --font:        'Plus Jakarta Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(124,58,237,.4);border-radius:3px}
 
-  /* ── LOGIN ── */
-  #login-screen { position: fixed; inset: 0; background: var(--negro); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .login-card { width: 420px; max-width: 95vw; border: 1px solid var(--gris-borde); background: var(--gris-medio); padding: 48px 40px 40px; position: relative; }
-  .login-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--dorado-sat), transparent); }
-  .login-logo { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 600; letter-spacing: 6px; text-transform: uppercase; color: var(--dorado); margin-bottom: 32px; }
-  .login-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 700; line-height: 1.1; margin-bottom: 8px; }
-  .login-sub { font-size: 11px; color: var(--texto-dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 36px; }
-  .field-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--dorado); margin-bottom: 8px; display: block; }
-  .field-input { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 28px; padding: 14px 16px; outline: none; transition: border-color 0.2s; letter-spacing: 10px; text-align: center; }
-  .field-input:focus { border-color: var(--dorado); }
-  .field-input::placeholder { letter-spacing: 2px; color: #333; font-size: 14px; }
-  .field-group { margin-bottom: 24px; }
-  .timer-badge { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--texto-dim); letter-spacing: 1px; margin-bottom: 28px; }
-  .timer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dorado-sat); animation: pulse 2s infinite; flex-shrink: 0; }
-  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
-  .btn-primary { width: 100%; background: var(--dorado-sat); color: var(--negro); border: none; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 16px; cursor: pointer; transition: background 0.2s; }
-  .btn-primary:hover { background: var(--dorado); }
-  .error-msg { font-size: 11px; color: var(--rojo); letter-spacing: 1px; margin-top: 12px; display: none; text-align: center; }
+/* ── GLASS ── */
+.glass{background:var(--surface);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r)}
 
-  /* ── ADMIN FLOATING ── */
-  #admin-panel { position: fixed; bottom: 24px; right: 24px; z-index: 200; }
-  .admin-toggle { width: 44px; height: 44px; border-radius: 50%; background: var(--gris-medio); border: 1px solid var(--gris-borde); color: var(--dorado); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
-  .admin-toggle:hover { border-color: var(--dorado); }
-  .admin-card { position: absolute; bottom: 56px; right: 0; width: 320px; background: var(--gris-medio); border: 1px solid var(--gris-borde); padding: 24px; display: none; max-height: 80vh; overflow-y: auto; }
-  .admin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--dorado-sat),transparent); }
-  .admin-card.open { display: block; }
-  .admin-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 16px; }
-  .admin-pw { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 13px; padding: 10px 12px; outline: none; margin-bottom: 10px; transition: border-color 0.2s; }
-  .admin-pw:focus { border-color: var(--dorado); }
-  .btn-admin { width: 100%; background: var(--negro); border: 1px solid var(--dorado-sat); color: var(--dorado-sat); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 8px; }
-  .btn-admin:hover { background: var(--dorado-sat); color: var(--negro); }
-  .btn-admin.danger { border-color: var(--rojo); color: var(--rojo); }
-  .btn-admin.danger:hover { background: var(--rojo); color: var(--blanco); }
-  .generated-pin { display: none; margin-top: 16px; padding: 16px; background: var(--negro); border: 1px solid var(--dorado); text-align: center; }
-  .pin-display { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 700; color: var(--dorado-sat); letter-spacing: 10px; }
-  .pin-expiry { font-size: 10px; color: var(--texto-dim); letter-spacing: 1px; margin-top: 6px; }
-  .btn-copy-pin { width: 100%; background: none; border: 1px solid var(--gris-borde); color: var(--texto-dim); font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
-  .btn-copy-pin:hover { border-color: var(--dorado); color: var(--dorado); }
-  .admin-error { font-size: 11px; color: var(--rojo); text-align: center; margin-top: 8px; display: none; }
-  .admin-divider { border: none; border-top: 1px solid var(--gris-borde); margin: 16px 0; }
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border:none;border-radius:var(--r-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(124,58,237,.35)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,.5)}
+.btn-primary:active{transform:none}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-2)}
+.btn-green{background:#15803D;color:#fff}
+.btn-green:hover{background:#166534}
+.btn-red{background:#DC2626;color:#fff}
+.btn-red:hover{background:#B91C1C}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn-icon{width:34px;height:34px;padding:0;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:var(--r-sm)}
+.btn-icon:hover{color:var(--text);background:var(--surface-2)}
 
-  /* REVIEW QUEUE */
-  .review-count { font-size: 11px; color: var(--texto-dim); margin-bottom: 12px; }
-  .review-item { background: var(--negro); border: 1px solid var(--gris-borde); padding: 14px; margin-bottom: 10px; }
-  .review-item-meta { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--dorado); margin-bottom: 8px; }
-  .review-item-hook { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; color: var(--blanco); margin-bottom: 6px; line-height: 1.3; }
-  .review-item-snippet { font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 10px; }
-  .review-actions { display: flex; gap: 8px; }
-  .btn-approve { flex: 1; background: none; border: 1px solid var(--verde); color: var(--verde); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; }
-  .btn-approve:hover { background: var(--verde); color: var(--negro); }
-  .btn-reject { flex: 1; background: none; border: 1px solid var(--rojo); color: var(--rojo); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; }
-  .btn-reject:hover { background: var(--rojo); color: var(--blanco); }
-  .empty-queue { font-size: 11px; color: var(--texto-dim); text-align: center; padding: 16px; letter-spacing: 1px; }
+/* ── INPUTS ── */
+input,select,textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+select option{background:#1a1025}
+textarea{resize:vertical;min-height:80px}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field{margin-bottom:14px}
+.checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);transition:color .2s;margin-bottom:8px}
+.checkbox-item:hover{color:var(--text)}
+.checkbox-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+.char-count{font-size:11px;color:var(--muted);text-align:right;margin-top:4px}
 
-  /* ── APP ── */
-  #app { display: none; min-height: 100vh; flex-direction: column; }
-  .header { border-bottom: 1px solid var(--gris-borde); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; background: var(--gris-medio); position: sticky; top: 0; z-index: 10; }
-  .header-brand { font-family: 'Cormorant Garamond', serif; font-size: 11px; font-weight: 600; letter-spacing: 5px; text-transform: uppercase; color: var(--dorado); }
-  .header-title { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--texto-dim); }
-  .header-session { display: flex; align-items: center; gap: 16px; }
-  .session-timer { font-size: 10px; letter-spacing: 1px; color: var(--dorado); display: flex; align-items: center; gap: 6px; }
-  .btn-logout { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--texto-dim); background: none; border: 1px solid var(--gris-borde); padding: 6px 14px; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.2s; }
-  .btn-logout:hover { border-color: var(--dorado); color: var(--dorado); }
-  .main { display: grid; grid-template-columns: 400px 1fr; min-height: calc(100vh - 65px); }
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+#login-screen.hidden{display:none}
+.login-card{width:380px;max-width:95vw;padding:44px 40px 40px;text-align:center}
+.login-logo{font-size:26px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.login-sub{color:var(--muted);font-size:12px;margin-bottom:36px;letter-spacing:.3px}
+.login-card .field{text-align:left}
+.login-card input{font-size:22px;text-align:center;letter-spacing:8px;padding:14px}
+#login-error{color:var(--red);font-size:12px;margin-bottom:14px;min-height:18px}
+.timer-hint{font-size:11px;color:var(--muted);margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:6px}
+.dot-pulse{width:6px;height:6px;border-radius:50%;background:var(--accent-l);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-  /* LEFT PANEL */
-  .panel-left { border-right: 1px solid var(--gris-borde); padding: 32px; background: var(--gris-medio); overflow-y: auto; }
-  .panel-section { margin-bottom: 24px; }
-  .panel-section-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gris-borde); }
-  .select-field, .textarea-field, .input-field { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 12px; padding: 12px 14px; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; }
-  .select-field:focus, .textarea-field:focus, .input-field:focus { border-color: var(--dorado); }
-  .select-field option { background: var(--negro); }
-  .textarea-field { resize: vertical; min-height: 90px; line-height: 1.6; }
-  .input-field { margin-bottom: 10px; }
-  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
-  .checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 12px; color: #aaa; transition: color 0.2s; }
-  .checkbox-item:hover { color: var(--blanco); }
-  .checkbox-item input { width: 14px; height: 14px; accent-color: var(--dorado-sat); cursor: pointer; }
-  .char-count { font-size: 10px; color: var(--texto-dim); text-align: right; margin-top: 4px; }
-  .btn-generate { width: 100%; background: var(--negro); border: 1px solid var(--dorado-sat); color: var(--dorado-sat); font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 16px; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
-  .btn-generate:hover { background: var(--dorado-sat); color: var(--negro); }
-  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+/* ── APP ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.visible{display:flex}
 
-  /* RIGHT PANEL */
-  .panel-right { padding: 40px; overflow-y: auto; background: var(--negro); }
-  .output-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-  .output-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; }
-  .output-meta { font-size: 10px; letter-spacing: 2px; color: var(--texto-dim); text-transform: uppercase; margin-top: 4px; }
-  .btn-copy { background: none; border: 1px solid var(--gris-borde); color: var(--texto-dim); font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 16px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-  .btn-copy:hover { border-color: var(--dorado); color: var(--dorado); }
-  .output-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; color: var(--texto-dim); }
-  .output-empty-icon { font-size: 40px; opacity: 0.3; }
-  .output-empty-text { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; }
-  .script-output { display: none; }
-  .script-meta-bar { display: flex; gap: 10px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--gris-borde); flex-wrap: wrap; }
-  .meta-chip { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--gris-borde); color: var(--texto-dim); }
-  .meta-chip.gold { border-color: var(--dorado); color: var(--dorado); }
-  .script-section { margin-bottom: 28px; }
-  .script-section-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-  .script-section-label::after { content: ''; flex: 1; height: 1px; background: var(--gris-borde); }
-  .script-text { font-size: 14px; line-height: 1.8; color: #e0e0e0; white-space: pre-wrap; }
-  .hook-text { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--blanco); line-height: 1.4; border-left: 2px solid var(--dorado-sat); padding-left: 20px; }
-  .produccion-block { background: #111; border: 1px solid var(--gris-borde); padding: 16px; }
-  .produccion-item { display: flex; gap: 12px; margin-bottom: 10px; font-size: 12px; line-height: 1.6; color: #bbb; }
-  .produccion-item:last-child { margin-bottom: 0; }
-  .produccion-icon { color: var(--dorado); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+/* ── TOPBAR ── */
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid var(--border);background:rgba(10,10,10,.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:20;flex-shrink:0}
+.logo-text{font-size:17px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-badge{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--accent-l);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+#session-timer{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 12px;border-radius:20px;font-variant-numeric:tabular-nums}
+#session-timer.warn{color:#F59E0B;border-color:rgba(245,158,11,.3)}
 
-  /* LOADING */
-  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
-  .loading-text { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--dorado); animation: blink 1.5s infinite; }
-  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
-  .loading-bar { width: 200px; height: 1px; background: var(--gris-borde); position: relative; overflow: hidden; }
-  .loading-bar::after { content:''; position:absolute; left:-50%; top:0; width:50%; height:100%; background:var(--dorado-sat); animation:slide 1.2s infinite linear; }
-  @keyframes slide { to{left:150%} }
+/* ── MAIN GRID ── */
+#main-content{display:grid;grid-template-columns:360px 1fr;flex:1;overflow:hidden;padding:16px;gap:16px;padding-bottom:calc(var(--history-h)+16px)}
 
-  /* TOAST */
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--gris-medio); border: 1px solid var(--dorado); color: var(--dorado); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; display: none; z-index: 300; }
+/* ── LEFT PANEL ── */
+#left-panel{overflow-y:auto;padding:22px;padding-bottom:calc(var(--history-h) + 32px)}
+.panel-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:18px}
+.type-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .2s}
+.pill.active{background:rgba(124,58,237,.2);border-color:var(--accent);color:var(--accent-l)}
+#btn-gen{width:100%;padding:13px;font-size:13px}
+#example-count{text-align:center;font-size:11px;color:var(--muted);margin-top:8px}
 
-  @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; }
-    .panel-left { border-right: none; border-bottom: 1px solid var(--gris-borde); }
-    .header { padding: 16px 20px; }
-    .header-title { display: none; }
-    .panel-right, .panel-left { padding: 24px 20px; }
-  }
+/* ── RIGHT PANEL ── */
+#right-panel{overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:16px}
+#empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px}
+.empty-icon{font-size:44px;opacity:.2}
+.script-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.script-meta{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:var(--accent-l)}
+.script-section{margin-bottom:16px;padding:16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border)}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-hook{background:#F59E0B}
+.dot-dev{background:var(--accent-l)}
+.dot-cta{background:var(--green)}
+.dot-prod{background:#06B6D4}
+.hook-text{font-size:20px;font-weight:700;line-height:1.4;color:var(--text);border-left:3px solid var(--accent);padding-left:16px}
+.script-text{font-size:14px;line-height:1.8;color:#CBD5E1;white-space:pre-wrap}
+.prod-block{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:14px}
+.prod-item{display:flex;gap:10px;font-size:12px;line-height:1.6;color:#94A3B8;margin-bottom:8px}
+.prod-item:last-child{margin-bottom:0}
+.prod-icon{color:var(--accent-l);flex-shrink:0;margin-top:2px}
+.prod-subtitle{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-l);margin-bottom:8px}
+#script-output{display:none}
+#script-output.visible{display:block}
+
+/* ── LOADING ── */
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+#loading-overlay.visible{display:flex}
+.spinner{width:42px;height:42px;border:3px solid rgba(124,58,237,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--accent-l);animation:pulse 1.5s infinite}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(var(--history-h)+16px);left:50%;transform:translateX(-50%);background:#1a1a2a;border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:11px 22px;border-radius:var(--r-sm);display:none;z-index:400;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+
+/* ── HISTORY BAR ── */
+#history-bar{position:fixed;bottom:0;left:0;right:0;height:var(--history-h);background:rgba(10,10,10,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:14px;z-index:50}
+.history-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+#history-scroll{display:flex;gap:10px;overflow-x:auto;flex:1;padding:4px 0;scroll-behavior:smooth}
+#history-scroll::-webkit-scrollbar{height:3px}
+.history-card{flex-shrink:0;width:175px;padding:9px 12px 9px 15px;border-radius:9px;background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.history-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--grad)}
+.history-card:hover{border-color:rgba(124,58,237,.4);background:var(--surface-2);transform:translateY(-2px)}
+.history-card.active{border-color:var(--accent);background:rgba(124,58,237,.1)}
+.history-card-title{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.history-card-meta{font-size:10px;color:var(--muted)}
+#history-empty{color:var(--muted);font-size:12px;font-style:italic}
+
+/* ── ADMIN BUTTON ── */
+#admin-btn{position:fixed;bottom:calc(var(--history-h)+28px);right:24px;width:44px;height:44px;border-radius:50%;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--accent-l);font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:60;transition:all .2s;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#admin-btn:hover{background:rgba(124,58,237,.3);transform:rotate(30deg)}
+#admin-btn.show{display:flex}
+#pending-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 3px}
+#pending-badge.show{display:flex}
+
+/* ── ADMIN AUTH MODAL ── */
+#admin-auth-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center}
+#admin-auth-modal.visible{display:flex}
+.auth-card{background:#12121c;border:1px solid var(--border);border-radius:var(--r);padding:32px;width:340px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.auth-card h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.auth-card p{color:var(--muted);font-size:13px;margin-bottom:22px}
+#admin-auth-error{color:var(--red);font-size:12px;margin-top:8px;min-height:16px}
+
+/* ── ADMIN PANEL ── */
+#admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200}
+#admin-overlay.visible{display:block}
+#admin-panel{position:fixed;top:0;right:0;width:440px;height:100vh;background:#0f0f18;border-left:1px solid var(--border);display:none;flex-direction:column;z-index:201;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+#admin-panel.visible{display:flex}
+.admin-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.admin-header h2{font-size:15px;font-weight:700}
+.admin-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.admin-tab{padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--font);letter-spacing:.4px}
+.admin-tab:hover{color:var(--text)}
+.admin-tab.active{color:var(--accent-l);border-bottom-color:var(--accent)}
+.admin-body{flex:1;overflow-y:auto;padding:20px 22px}
+.admin-section{display:none}
+.admin-section.active{display:block}
+.admin-section h3{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text)}
+.admin-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;max-height:220px;overflow-y:auto}
+.admin-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);gap:8px}
+.admin-item span{flex:1;font-size:13px}
+.admin-add{display:flex;gap:8px}
+.admin-add input{flex:1}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* review queue */
+.queue-item{padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px;cursor:pointer;transition:all .2s}
+.queue-item:hover{border-color:rgba(124,58,237,.4);background:var(--surface-2)}
+.queue-item-meta{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-l);margin-bottom:6px}
+.queue-item-hook{font-size:14px;font-weight:600;margin-bottom:6px;line-height:1.4}
+.queue-item-snippet{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.queue-actions{display:flex;gap:8px}
+.queue-empty{color:var(--muted);font-size:13px;text-align:center;padding:36px 0}
+
+/* ── REVIEW MODAL ── */
+#review-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:300;align-items:center;justify-content:center;padding:24px}
+#review-modal.visible{display:flex}
+.review-card{background:#12121c;border:1px solid var(--border);border-radius:var(--r);max-width:680px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(124,58,237,.15)}
+.review-card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.review-card-header h3{font-size:15px;font-weight:700}
+.review-card-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.review-card-body{flex:1;overflow-y:auto;padding:22px}
+.review-card-footer{display:flex;gap:10px;padding:16px 22px;border-top:1px solid var(--border);flex-shrink:0}
+
+/* generated pin box */
+.pin-box{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:var(--r-sm);padding:20px;text-align:center;margin-top:12px;display:none}
+.pin-display{font-size:38px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:8px}
+.pin-expiry{font-size:11px;color:var(--muted);margin-top:6px}
+
+@media(max-width:900px){
+  #main-content{grid-template-columns:1fr}
+  #admin-panel{width:100%}
+}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo">Ryvar Media Group</div>
-    <div class="login-title">Generador<br>de Guiones</div>
-    <div class="login-sub">Acceso restringido · Equipo interno</div>
-    <div class="field-group">
-      <label class="field-label">PIN de acceso</label>
-      <input type="password" class="field-input" id="login-pin" placeholder="······" maxlength="6" inputmode="numeric">
+  <div class="glass login-card">
+    <div class="login-logo">RYVAR</div>
+    <div class="login-sub">Generador de Guiones · Acceso restringido</div>
+    <div class="field">
+      <label>PIN de acceso</label>
+      <input type="password" id="login-pin" placeholder="······" maxlength="6" inputmode="numeric">
     </div>
-    <div class="timer-badge">
-      <div class="timer-dot"></div>
-      <span>Los PINs expiran 3 horas después de ser generados</span>
-    </div>
-    <button class="btn-primary" onclick="doLogin()">Ingresar</button>
-    <div class="error-msg" id="login-error">PIN incorrecto o expirado. Solicita uno nuevo.</div>
-  </div>
-</div>
-
-<!-- ADMIN FLOATING -->
-<div id="admin-panel">
-  <button class="admin-toggle" onclick="toggleAdmin()" title="Admin">⚙</button>
-  <div class="admin-card" id="admin-card">
-    <div class="admin-title">Panel Administrador</div>
-    <div id="admin-auth">
-      <input type="password" class="admin-pw" id="admin-pw" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter') unlockAdmin()">
-      <button class="btn-admin" onclick="unlockAdmin()">Verificar</button>
-      <div class="admin-error" id="admin-error">Contraseña incorrecta</div>
-    </div>
-    <div id="admin-content" style="display:none;">
-
-      <!-- GENERAR PIN -->
-      <div class="admin-title" style="margin-top:0;">Acceso de empleados</div>
-      <button class="btn-admin" onclick="generateNewPin()">✦ Generar nuevo PIN</button>
-      <div class="generated-pin" id="generated-pin">
-        <div class="pin-display" id="pin-display">——</div>
-        <div class="pin-expiry" id="pin-expiry"></div>
-        <button class="btn-copy-pin" onclick="copyPin()">Copiar PIN</button>
-      </div>
-
-      <hr class="admin-divider">
-
-      <!-- REVISAR GUIONES -->
-      <div class="admin-title">Guiones pendientes de revisión</div>
-      <div class="review-count" id="review-count">Cargando...</div>
-      <div id="review-list"></div>
-
-      <hr class="admin-divider">
-
-      <!-- SHEETS WEBHOOK -->
-      <div class="admin-title">Google Sheets Webhook</div>
-      <input type="text" class="admin-pw" id="sheets-url" placeholder="URL del Apps Script Web App" style="font-size:11px; letter-spacing:0;">
-      <button class="btn-admin" onclick="saveSheetUrl()">Guardar URL</button>
-
+    <div id="login-error"></div>
+    <div class="timer-hint"><div class="dot-pulse"></div> Los PINs expiran 3 horas después de ser generados</div>
+    <button class="btn btn-primary" style="width:100%;padding:13px" onclick="doLogin()">Ingresar</button>
+    <div style="margin-top:16px;text-align:center">
+      <button onclick="openFirstAccess()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);text-decoration:underline;letter-spacing:.3px">Acceso administrador</button>
     </div>
   </div>
 </div>
 
-<!-- LOADING -->
-<div class="loading-overlay" id="loading">
-  <div class="loading-text">Generando guión</div>
-  <div class="loading-bar"></div>
+<!-- FIRST ACCESS MODAL -->
+<div id="first-access-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:600;align-items:center;justify-content:center">
+  <div class="glass" style="width:360px;max-width:95vw;padding:32px;text-align:center">
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px">🔐 Acceso Admin</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:22px">Ingresa la contraseña de administrador para acceder directamente al panel</div>
+    <input type="password" id="first-access-pw" placeholder="Contraseña admin" style="margin-bottom:8px" onkeydown="if(event.key==='Enter')doFirstAccess()">
+    <div id="first-access-error" style="color:var(--red);font-size:12px;margin-bottom:12px;min-height:16px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeFirstAccess()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doFirstAccess()">Entrar</button>
+    </div>
+  </div>
 </div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
 
 <!-- APP -->
-<div id="app" style="display:none; flex-direction:column;">
-  <div class="header">
-    <div class="header-brand">Ryvar Media Group</div>
-    <div class="header-title">Generador de Guiones</div>
-    <div class="header-session">
-      <div class="session-timer">
-        <div class="timer-dot"></div>
-        <span id="session-countdown">3:00:00</span>
-      </div>
-      <button class="btn-logout" onclick="doLogout()">Salir</button>
+<div id="app">
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="logo-text">RYVAR</span>
+      <span class="top-badge">Generador de Guiones</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="session-timer">⏱ 3:00:00</div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
     </div>
   </div>
 
-  <div class="main">
-    <!-- LEFT -->
-    <div class="panel-left">
+  <div id="main-content">
+    <!-- LEFT PANEL -->
+    <div id="left-panel" class="glass">
+      <div class="panel-title">✦ Nuevo Guión</div>
 
-      <div class="panel-section">
-        <div class="panel-section-label">Tipo de guión</div>
-        <select class="select-field" id="tipo-guion">
-          <option value="marca">Marca — corporativo / credibilidad / venta directa</option>
-          <option value="numeros">Números — viralidad / exposición masiva</option>
-        </select>
+      <div class="field">
+        <label>Tipo de guión</label>
+        <div class="type-pills" id="tipo-pills">
+          <div class="pill active" onclick="selectTipo(this,'marca')">Marca</div>
+          <div class="pill" onclick="selectTipo(this,'numeros')">Números</div>
+        </div>
+        <input type="hidden" id="tipo-guion" value="marca">
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Sector</div>
-        <select class="select-field" id="sector">
-          <option value="">— Selecciona el sector —</option>
-          <option value="consultoria_financiera">Consultoría financiera</option>
-          <option value="venta_gomas">Venta de gomas / neumáticos</option>
-          <option value="retail_moda">Retail de moda</option>
-          <option value="agencia_marketing">Agencia de marketing</option>
-          <option value="influencer_comida">Influencer de comida</option>
-          <option value="influencer_lifestyle">Influencer de lifestyle</option>
-          <option value="paneles_solares">Paneles solares</option>
-          <option value="climatizacion">Climatización y refrigeración</option>
-          <option value="decoracion_eventos">Decoración de eventos</option>
-          <option value="inmobiliario">Inmobiliario / Real estate</option>
-          <option value="otro">Otro</option>
-        </select>
+      <div class="field">
+        <label>Sector</label>
+        <select id="sector"><option value="">— Selecciona el sector —</option></select>
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Plataforma objetivo</div>
-        <select class="select-field" id="plataforma">
+      <div class="field">
+        <label>Plataforma</label>
+        <select id="plataforma">
           <option value="instagram">Instagram Reels</option>
           <option value="tiktok">TikTok</option>
           <option value="facebook">Facebook Reels</option>
           <option value="youtube">YouTube Shorts</option>
         </select>
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Duración</div>
-        <select class="select-field" id="duracion">
-          <option value="15">7-15 seg — máxima viralidad</option>
-          <option value="30">15-30 seg — educativo / marca</option>
-          <option value="60">30-60 seg — contenido profundo</option>
-        </select>
+      <div class="field">
+        <label>Duración</label>
+        <select id="duracion"></select>
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Cliente / Marca</div>
-        <input type="text" class="input-field" id="cliente" placeholder="Nombre del cliente o marca">
+      <div class="field">
+        <label>Cliente / Marca</label>
+        <input type="text" id="cliente" placeholder="Nombre del cliente o marca">
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Tema del guión</div>
-        <textarea class="textarea-field" id="tema" placeholder="Describe el tema, mensaje o producto que quieres comunicar..." oninput="updateCount(this,'tema-count')"></textarea>
+      <div class="field">
+        <label>Tema del guión</label>
+        <textarea id="tema" placeholder="Describe el tema, mensaje o producto..." oninput="updateCount(this,'tema-count')"></textarea>
         <div class="char-count"><span id="tema-count">0</span> caracteres</div>
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Elementos a incluir</div>
-        <div class="checkbox-group">
-          <label class="checkbox-item"><input type="checkbox" id="inc-hook" checked> Hook de apertura fuerte</label>
-          <label class="checkbox-item"><input type="checkbox" id="inc-cta" checked> CTA claro al final</label>
-          <label class="checkbox-item"><input type="checkbox" id="inc-estadistica"> Dato / estadística de impacto</label>
-          <label class="checkbox-item"><input type="checkbox" id="inc-reenganche"> Reenganche (seg 8-12)</label>
-        </div>
+      <div class="field">
+        <label>Elementos a incluir</label>
+        <label class="checkbox-item"><input type="checkbox" id="inc-hook" checked> Hook de apertura fuerte</label>
+        <label class="checkbox-item"><input type="checkbox" id="inc-cta" checked> CTA claro al final</label>
+        <label class="checkbox-item"><input type="checkbox" id="inc-estadistica"> Dato / estadística de impacto</label>
+        <label class="checkbox-item"><input type="checkbox" id="inc-reenganche"> Reenganche (seg 8-12)</label>
       </div>
-
-      <div class="panel-section">
-        <div class="panel-section-label">Notas adicionales</div>
-        <textarea class="textarea-field" id="notas" placeholder="Tono especial, palabras a evitar, referencias..." style="min-height:70px;" oninput="updateCount(this,'notas-count')"></textarea>
+      <div class="field">
+        <label>Notas adicionales</label>
+        <textarea id="notas" placeholder="Tono, palabras a evitar, referencias..." style="min-height:64px" oninput="updateCount(this,'notas-count')"></textarea>
         <div class="char-count"><span id="notas-count">0</span> caracteres</div>
       </div>
-
-      <button class="btn-generate" id="btn-gen" onclick="generarGuion()">✦ Generar Guión</button>
+      <button class="btn btn-primary" id="btn-gen" onclick="generarGuion()">⚡ Generar Guión</button>
+      <div id="example-count"></div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="panel-right">
-      <div class="output-empty" id="output-empty">
-        <div class="output-empty-icon">✦</div>
-        <div class="output-empty-text">Aquí aparecerá tu guión</div>
+    <!-- RIGHT PANEL -->
+    <div id="right-panel" class="glass">
+      <div id="empty-state">
+        <div class="empty-icon">📝</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text)">Tu guión aparecerá aquí</div>
+        <div style="font-size:13px;color:var(--muted)">Completa el formulario y genera</div>
       </div>
-      <div class="script-output" id="script-output">
-        <div class="output-header">
-          <div>
-            <div class="output-title" id="out-title">Guión</div>
-            <div class="output-meta" id="out-meta">—</div>
+      <div id="script-output">
+        <div class="script-header">
+          <div class="script-meta" id="out-chips"></div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copiar</button>
+            <button class="btn btn-ghost btn-sm" onclick="sendToReview()">📤 Revisión</button>
           </div>
-          <button class="btn-copy" onclick="copyScript()">Copiar todo</button>
         </div>
-        <div class="script-meta-bar" id="out-chips"></div>
         <div id="out-content"></div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- HISTORY BAR -->
+<div id="history-bar">
+  <div class="history-label">Historial</div>
+  <div id="history-scroll"><div id="history-empty">Sin guiones en esta sesión</div></div>
+</div>
+
+<!-- ADMIN BUTTON -->
+<button id="admin-btn" onclick="openAdminAuth()" title="Panel Admin">
+  ⚙<div id="pending-badge"></div>
+</button>
+
+<!-- ADMIN AUTH MODAL -->
+<div id="admin-auth-modal">
+  <div class="auth-card glass">
+    <h3>🔒 Panel Admin</h3>
+    <p>Ingresa la contraseña de administrador</p>
+    <input type="password" id="admin-auth-input" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter')verifyAdminAuth()">
+    <div id="admin-auth-error"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;justify-content:center">
+      <button class="btn btn-ghost btn-sm" onclick="closeAdminAuth()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="verifyAdminAuth()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN OVERLAY -->
+<div id="admin-overlay" onclick="closeAdmin()"></div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-panel">
+  <div class="admin-header">
+    <h2>⚙ Panel Admin</h2>
+    <button class="btn btn-icon" onclick="closeAdmin()">✕</button>
+  </div>
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('cola',this)">Cola</button>
+    <button class="admin-tab" onclick="switchTab('sectores',this)">Sectores</button>
+    <button class="admin-tab" onclick="switchTab('duraciones',this)">Duraciones</button>
+    <button class="admin-tab" onclick="switchTab('config',this)">Config</button>
+  </div>
+  <div class="admin-body">
+
+    <!-- COLA -->
+    <div class="admin-section active" id="tab-cola">
+      <h3>Cola de revisión</h3>
+      <div id="queue-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+      <div id="queue-list"></div>
+    </div>
+
+    <!-- SECTORES -->
+    <div class="admin-section" id="tab-sectores">
+      <h3>Gestión de Sectores</h3>
+      <div class="admin-list" id="sectors-list"></div>
+      <div class="admin-add">
+        <input type="text" id="new-sector" placeholder="Nuevo sector..." onkeydown="if(event.key==='Enter')addSector()">
+        <button class="btn btn-primary btn-sm" onclick="addSector()">+ Agregar</button>
+      </div>
+    </div>
+
+    <!-- DURACIONES -->
+    <div class="admin-section" id="tab-duraciones">
+      <h3>Gestión de Duraciones</h3>
+      <div class="admin-list" id="duraciones-list"></div>
+      <div class="admin-add">
+        <input type="text" id="new-duracion" placeholder="Ej: 45-60 seg" onkeydown="if(event.key==='Enter')addDuracion()">
+        <button class="btn btn-primary btn-sm" onclick="addDuracion()">+ Agregar</button>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="admin-section" id="tab-config">
+      <h3>Acceso de empleados</h3>
+      <button class="btn btn-primary" style="width:100%" onclick="generateNewPin()">✦ Generar nuevo PIN</button>
+      <div class="pin-box" id="pin-box">
+        <div class="pin-display" id="pin-display">——</div>
+        <div class="pin-expiry" id="pin-expiry"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%" onclick="copyPin()">Copiar PIN</button>
+      </div>
+
+      <div class="divider"></div>
+      <h3>Google Sheets Webhook</h3>
+      <div class="field">
+        <input type="url" id="sheets-url" placeholder="https://script.google.com/...">
+      </div>
+      <button class="btn btn-ghost" style="width:100%" onclick="saveSheetUrl()">Guardar URL</button>
+
+      <div class="divider"></div>
+      <h3>Contraseña Admin</h3>
+      <div class="field">
+        <input type="password" id="new-admin-pw" placeholder="Nueva contraseña">
+      </div>
+      <button class="btn btn-ghost" style="width:100%" onclick="changeAdminPw()">Actualizar contraseña</button>
+
+      <div class="divider"></div>
+      <h3>Base de aprendizaje</h3>
+      <div id="approved-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+      <button class="btn btn-red" style="width:100%;font-size:12px" onclick="clearApproved()">Limpiar guiones aprobados</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div id="review-modal">
+  <div class="review-card">
+    <div class="review-card-header">
+      <div>
+        <h3 id="rm-title">Guión</h3>
+        <div class="review-card-meta" id="rm-meta"></div>
+      </div>
+      <button class="btn btn-icon" onclick="closeReviewModal()">✕</button>
+    </div>
+    <div class="review-card-body" id="rm-body"></div>
+    <div class="review-card-footer">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeReviewModal()">Cerrar</button>
+      <button class="btn btn-red" style="flex:1" onclick="rejectGuionModal()">✕ Rechazar</button>
+      <button class="btn btn-green" style="flex:1" onclick="approveGuionModal()">✓ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Generando guión</div>
+</div>
+
+<div id="toast"></div>
+
 <script>
-// ─── CONFIG ──────────────────────────────────────────
+// ─── CONFIG & DEFAULTS ───────────────────────────────────────────────────────
 const SESSION_MS = 3 * 60 * 60 * 1000;
-const ADMIN_PASSWORD = 'ryvar2024'; // Cambia esto
- // Reemplaza con tu key
 
-const SECTOR_LABELS = {
-  consultoria_financiera: 'Consultoría financiera',
-  venta_gomas: 'Venta de gomas',
-  retail_moda: 'Retail de moda',
-  agencia_marketing: 'Agencia de marketing',
-  influencer_comida: 'Influencer de comida',
-  influencer_lifestyle: 'Influencer de lifestyle',
-  paneles_solares: 'Paneles solares',
-  climatizacion: 'Climatización y refrigeración',
-  decoracion_eventos: 'Decoración de eventos',
-  inmobiliario: 'Inmobiliario',
-  otro: 'Otro'
-};
+const SECTOR_DEFAULTS = [
+  {value:'consultoria_financiera', label:'Consultoría financiera'},
+  {value:'venta_gomas',            label:'Venta de gomas / neumáticos'},
+  {value:'retail_moda',            label:'Retail de moda'},
+  {value:'agencia_marketing',      label:'Agencia de marketing'},
+  {value:'influencer_comida',      label:'Influencer de comida'},
+  {value:'influencer_lifestyle',   label:'Influencer de lifestyle'},
+  {value:'paneles_solares',        label:'Paneles solares'},
+  {value:'climatizacion',          label:'Climatización y refrigeración'},
+  {value:'decoracion_eventos',     label:'Decoración de eventos'},
+  {value:'inmobiliario',           label:'Inmobiliario / Real estate'},
+  {value:'otro',                   label:'Otro'},
+];
 
-// Contexto de sector para prompt
+const DURACION_DEFAULTS = [
+  {value:'15', label:'7-15 seg — máxima viralidad'},
+  {value:'30', label:'15-30 seg — educativo / marca'},
+  {value:'60', label:'30-60 seg — contenido profundo'},
+];
+
 const SECTOR_CONTEXT = {
-  consultoria_financiera: 'Audiencia profesional, busca credibilidad y resultados tangibles. Lenguaje técnico pero accesible. El dolor es el miedo a perder dinero o estancarse.',
-  venta_gomas: 'Audiencia práctica, decide por precio/calidad/seguridad. Lenguaje directo. El dolor es el riesgo en carretera y el gasto inesperado.',
-  retail_moda: 'Audiencia aspiracional, compra identidad no producto. Lenguaje visual y emocional. El dolor es no verse como quiere.',
-  agencia_marketing: 'Audiencia empresarial escéptica, ha visto muchas promesas. Necesita prueba social y números reales.',
-  influencer_comida: 'Audiencia curiosa y hambrienta. Lenguaje coloquial, sensorial. El gancho es la experiencia y el descubrimiento.',
-  influencer_lifestyle: 'Audiencia aspiracional, busca inspiración. Lenguaje cercano y auténtico. Vende experiencias y momentos.',
-  paneles_solares: 'Audiencia orientada al ahorro y sostenibilidad. El dolor es la factura eléctrica. Necesita ROI claro.',
-  climatizacion: 'Audiencia con problema concreto: calor o frío. Lenguaje técnico-práctico. Vende confort y eficiencia.',
-  decoracion_eventos: 'Audiencia emocional, compra sueños. El dolor es el miedo a que el evento no quede perfecto.',
-  inmobiliario: 'Audiencia con decisión de alto impacto. Necesita confianza y claridad. El dolor es el miedo a equivocarse.',
-  otro: 'Adaptar al contexto específico del cliente.'
+  consultoria_financiera:'Audiencia profesional, busca credibilidad y resultados tangibles. El dolor es el miedo a perder dinero o estancarse.',
+  venta_gomas:'Audiencia práctica, decide por precio/calidad/seguridad. El dolor es el riesgo en carretera.',
+  retail_moda:'Audiencia aspiracional, compra identidad no producto. El dolor es no verse como quiere.',
+  agencia_marketing:'Audiencia empresarial escéptica. Necesita prueba social y números reales.',
+  influencer_comida:'Audiencia curiosa y hambrienta. Lenguaje coloquial, sensorial.',
+  influencer_lifestyle:'Audiencia aspiracional, busca inspiración. Lenguaje cercano y auténtico.',
+  paneles_solares:'Orientada al ahorro y sostenibilidad. El dolor es la factura eléctrica.',
+  climatizacion:'Problema concreto: calor o frío. Vende confort y eficiencia.',
+  decoracion_eventos:'Audiencia emocional. El dolor es el miedo a que el evento no quede perfecto.',
+  inmobiliario:'Decisión de alto impacto. Necesita confianza y claridad.',
+  otro:'Adaptar al contexto del cliente.',
 };
 
-// ─── STORAGE HELPERS ────────────────────────────────
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
 const store = {
-  get: k => JSON.parse(localStorage.getItem(k) || 'null'),
+  get: k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch{ return null; } },
   set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
 };
+const getAdminPw = () => store.get('ryvar_admin_pw') || 'ryvar2024';
+const getSectors   = () => store.get('ryvar_sectors')   || SECTOR_DEFAULTS;
+const getDuraciones= () => store.get('ryvar_duraciones') || DURACION_DEFAULTS;
 
-// ─── ADMIN ──────────────────────────────────────────
-function toggleAdmin() {
-  const card = document.getElementById('admin-card');
-  card.classList.toggle('open');
-  if (card.classList.contains('open')) loadReviewQueue();
+// ─── SELECTS DINÁMICOS ────────────────────────────────────────────────────────
+function loadSectorSelect() {
+  const sel = document.getElementById('sector');
+  const saved = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona el sector —</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === saved) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+function loadDuracionSelect() {
+  const sel = document.getElementById('duracion');
+  const saved = sel.value;
+  sel.innerHTML = '';
+  getDuraciones().forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.value; o.textContent = d.label;
+    if (d.value === saved) o.selected = true;
+    sel.appendChild(o);
+  });
 }
 
-function unlockAdmin() {
-  if (document.getElementById('admin-pw').value === ADMIN_PASSWORD) {
-    document.getElementById('admin-auth').style.display = 'none';
-    document.getElementById('admin-content').style.display = 'block';
-    const savedUrl = store.get('ryvar_sheets_url');
-    if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
-    loadReviewQueue();
+// ─── TIPO PILLS ───────────────────────────────────────────────────────────────
+function selectTipo(el, val) {
+  document.querySelectorAll('#tipo-pills .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tipo-guion').value = val;
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+let sessionTimer = null;
+
+document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogin() {
+  const pin = document.getElementById('login-pin').value.trim();
+  const now = Date.now();
+  const codes = store.get('ryvar_pins') || [];
+  // FIX: validar por expiry explícito, no calculado
+  const valid = codes.some(c => c.pin === pin && now < c.expiry);
+  if (!valid) {
+    document.getElementById('login-error').textContent = 'PIN incorrecto o expirado. Solicita uno nuevo al admin.';
+    document.getElementById('login-pin').style.borderColor = 'var(--red)';
+    setTimeout(() => {
+      document.getElementById('login-pin').style.borderColor = '';
+      document.getElementById('login-error').textContent = '';
+    }, 3000);
+    return;
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('admin-btn').classList.add('show');
+  loadSectorSelect();
+  loadDuracionSelect();
+  updateExampleCount();
+  updatePendingBadge();
+  const sessionEnd = now + SESSION_MS;
+  startSessionTimer(sessionEnd);
+}
+
+function doLogout() {
+  clearInterval(sessionTimer);
+  sessionHistory = [];
+  renderHistory();
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('admin-btn').classList.remove('show');
+  document.getElementById('login-pin').value = '';
+  document.getElementById('script-output').classList.remove('visible');
+  document.getElementById('empty-state').style.display = 'flex';
+  closeAdmin();
+}
+
+function startSessionTimer(sessionEnd) {
+  clearInterval(sessionTimer);
+  const el = document.getElementById('session-timer');
+  sessionTimer = setInterval(() => {
+    const r = sessionEnd - Date.now();
+    if (r <= 0) { clearInterval(sessionTimer); alert('Sesión expirada.'); doLogout(); return; }
+    const h = Math.floor(r/3600000), m = Math.floor((r%3600000)/60000), s = Math.floor((r%60000)/1000);
+    el.textContent = `⏱ ${pad(h)}:${pad(m)}:${pad(s)}`;
+    el.classList.toggle('warn', r < 5 * 60 * 1000);
+  }, 1000);
+}
+const pad = n => String(n).padStart(2,'0');
+
+// ─── ADMIN AUTH ───────────────────────────────────────────────────────────────
+function openAdminAuth() {
+  document.getElementById('admin-auth-modal').classList.add('visible');
+  document.getElementById('admin-auth-input').value = '';
+  document.getElementById('admin-auth-error').textContent = '';
+  setTimeout(() => document.getElementById('admin-auth-input').focus(), 100);
+}
+function closeAdminAuth() {
+  document.getElementById('admin-auth-modal').classList.remove('visible');
+}
+function verifyAdminAuth() {
+  if (document.getElementById('admin-auth-input').value === getAdminPw()) {
+    closeAdminAuth();
+    openAdmin();
   } else {
-    document.getElementById('admin-error').style.display = 'block';
+    document.getElementById('admin-auth-error').textContent = 'Contraseña incorrecta';
+    document.getElementById('admin-auth-input').value = '';
+    document.getElementById('admin-auth-input').focus();
   }
 }
 
+// ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
+function openAdmin() {
+  document.getElementById('admin-overlay').classList.add('visible');
+  document.getElementById('admin-panel').classList.add('visible');
+  loadQueueList();
+  renderSectorsList();
+  renderDuracionesList();
+  updateApprovedCount();
+  const savedUrl = store.get('ryvar_sheets_url');
+  if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
+}
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('visible');
+  document.getElementById('admin-panel').classList.remove('visible');
+}
+function switchTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'cola') loadQueueList();
+}
+
+// ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
+function generateNewPin() {
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+  const now = Date.now();
+  const expiry = now + SESSION_MS;
+  // limpiar expirados y agregar nuevo
+  const codes = (store.get('ryvar_pins') || []).filter(c => now < c.expiry);
+  codes.push({ pin, expiry });
+  store.set('ryvar_pins', codes);
+  document.getElementById('pin-display').textContent = pin;
+  const exp = new Date(expiry);
+  document.getElementById('pin-expiry').textContent =
+    `Expira a las ${exp.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('pin-box').style.display = 'block';
+}
+function copyPin() {
+  navigator.clipboard.writeText(document.getElementById('pin-display').textContent).then(() => {
+    showToast('PIN copiado al portapapeles');
+  });
+}
+
+// ─── SECTORES ─────────────────────────────────────────────────────────────────
+function renderSectorsList() {
+  const list = document.getElementById('sectors-list');
+  const sectors = getSectors();
+  list.innerHTML = sectors.map((s,i) => `
+    <div class="admin-item">
+      <span>${esc(s.label)}</span>
+      <button class="btn btn-icon" onclick="deleteSector(${i})" style="font-size:12px">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">Sin sectores</div>';
+}
+function addSector() {
+  const inp = document.getElementById('new-sector');
+  const val = inp.value.trim();
+  if (!val) return;
+  const sectors = getSectors();
+  sectors.push({value: 'custom_' + Date.now(), label: val});
+  store.set('ryvar_sectors', sectors);
+  inp.value = '';
+  renderSectorsList();
+  loadSectorSelect();
+  showToast('Sector agregado');
+}
+function deleteSector(i) {
+  const sectors = getSectors();
+  sectors.splice(i,1);
+  store.set('ryvar_sectors', sectors);
+  renderSectorsList();
+  loadSectorSelect();
+  showToast('Sector eliminado');
+}
+
+// ─── DURACIONES ───────────────────────────────────────────────────────────────
+function renderDuracionesList() {
+  const list = document.getElementById('duraciones-list');
+  const durs = getDuraciones();
+  list.innerHTML = durs.map((d,i) => `
+    <div class="admin-item">
+      <span>${esc(d.label)}</span>
+      <button class="btn btn-icon" onclick="deleteDuracion(${i})" style="font-size:12px">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">Sin duraciones</div>';
+}
+function addDuracion() {
+  const inp = document.getElementById('new-duracion');
+  const val = inp.value.trim();
+  if (!val) return;
+  const durs = getDuraciones();
+  durs.push({value: 'custom_' + Date.now(), label: val});
+  store.set('ryvar_duraciones', durs);
+  inp.value = '';
+  renderDuracionesList();
+  loadDuracionSelect();
+  showToast('Duración agregada');
+}
+function deleteDuracion(i) {
+  const durs = getDuraciones();
+  durs.splice(i,1);
+  store.set('ryvar_duraciones', durs);
+  renderDuracionesList();
+  loadDuracionSelect();
+  showToast('Duración eliminada');
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 function saveSheetUrl() {
   const url = document.getElementById('sheets-url').value.trim();
   if (url) { store.set('ryvar_sheets_url', url); showToast('URL guardada'); }
 }
-
-function generateNewPin() {
-  const pin = String(Math.floor(100000 + Math.random() * 900000));
-  const now = Date.now();
-  const codes = (store.get('ryvar_pins') || []).filter(c => (now - c.created) < SESSION_MS);
-  codes.push({ pin, created: now });
-  store.set('ryvar_pins', codes);
-  document.getElementById('pin-display').textContent = pin;
-  const exp = new Date(now + SESSION_MS);
-  document.getElementById('pin-expiry').textContent = `Expira a las ${exp.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
-  document.getElementById('generated-pin').style.display = 'block';
+function changeAdminPw() {
+  const val = document.getElementById('new-admin-pw').value.trim();
+  if (!val) return;
+  store.set('ryvar_admin_pw', val);
+  document.getElementById('new-admin-pw').value = '';
+  showToast('Contraseña actualizada');
+}
+function clearApproved() {
+  if (!confirm('¿Eliminar todos los guiones aprobados?')) return;
+  localStorage.removeItem('ryvar_approved');
+  updateApprovedCount();
+  updateExampleCount();
+  showToast('Base de aprendizaje limpiada');
+}
+function updateApprovedCount() {
+  const c = (store.get('ryvar_approved') || []).length;
+  const el = document.getElementById('approved-count');
+  if (el) el.textContent = `${c} guión${c!==1?'es':''} aprobado${c!==1?'s':''}`;
 }
 
-function copyPin() {
-  navigator.clipboard.writeText(document.getElementById('pin-display').textContent).then(() => {
-    const b = document.querySelector('.btn-copy-pin');
-    b.textContent = '✓ Copiado';
-    setTimeout(() => b.textContent = 'Copiar PIN', 2000);
-  });
+// ─── REVIEW QUEUE ─────────────────────────────────────────────────────────────
+function updatePendingBadge() {
+  const n = (store.get('ryvar_pending') || []).length;
+  const badge = document.getElementById('pending-badge');
+  badge.textContent = n || '';
+  badge.classList.toggle('show', n > 0);
 }
 
-document.addEventListener('click', e => {
-  if (!document.getElementById('admin-panel').contains(e.target))
-    document.getElementById('admin-card').classList.remove('open');
-});
-
-// ─── REVIEW QUEUE ────────────────────────────────────
-function loadReviewQueue() {
+function loadQueueList() {
   const pending = store.get('ryvar_pending') || [];
-  const countEl = document.getElementById('review-count');
-  const listEl = document.getElementById('review-list');
-
+  const countEl = document.getElementById('queue-count');
+  const listEl  = document.getElementById('queue-list');
+  updatePendingBadge();
   if (!pending.length) {
     countEl.textContent = 'No hay guiones pendientes';
-    listEl.innerHTML = '<div class="empty-queue">Los guiones generados por el equipo aparecerán aquí para tu aprobación</div>';
+    listEl.innerHTML = '<div class="queue-empty">Los guiones generados aparecerán aquí para su aprobación</div>';
     return;
   }
-
   countEl.textContent = `${pending.length} guión${pending.length>1?'es':''} pendiente${pending.length>1?'s':''}`;
   listEl.innerHTML = '';
-
   pending.forEach((item, idx) => {
+    const sectorLabel = getSectors().find(s=>s.value===item.sector)?.label || item.sector || '—';
     const div = document.createElement('div');
-    div.className = 'review-item';
+    div.className = 'queue-item';
+    div.onclick = () => openReviewModal(idx);
     div.innerHTML = `
-      <div class="review-item-meta">${SECTOR_LABELS[item.sector]||item.sector} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma}</div>
-      <div class="review-item-hook">${esc(item.guion.hook)}</div>
-      ${item.guion.hook_apellido ? `<div class="review-item-snippet" style="color:var(--dorado-sat);font-style:italic;">${esc(item.guion.hook_apellido)}</div>` : ''}
-      <div class="review-item-snippet">${esc((item.guion.cuerpo||'').substring(0,120))}...</div>
-      <div class="review-actions">
-        <button class="btn-approve" onclick="approveGuion(${idx})">✓ Aprobar</button>
-        <button class="btn-reject" onclick="rejectGuion(${idx})">✗ Rechazar</button>
+      <div class="queue-item-meta">${esc(sectorLabel)} · ${item.tipo==='numeros'?'Números':'Marca'} · ${esc(item.plataforma||'')}</div>
+      <div class="queue-item-hook">${esc(item.guion.hook)}</div>
+      ${item.guion.hook_apellido && item.tipo==='numeros' ? `<div class="queue-item-snippet" style="color:var(--accent-l);font-style:italic">${esc(item.guion.hook_apellido)}</div>` : ''}
+      <div class="queue-item-snippet">${esc((item.guion.cuerpo||'').substring(0,110))}...</div>
+      <div class="queue-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="approveGuion(${idx})">✓ Aprobar</button>
+        <button class="btn btn-red btn-sm" style="flex:1" onclick="rejectGuion(${idx})">✗ Rechazar</button>
       </div>`;
     listEl.appendChild(div);
   });
@@ -455,183 +791,157 @@ async function approveGuion(idx) {
   const pending = store.get('ryvar_pending') || [];
   const item = pending[idx];
   if (!item) return;
-
-  // Guardar en aprobados
   const approved = store.get('ryvar_approved') || [];
-  approved.push({ ...item, approvedAt: Date.now() });
+  approved.push({...item, approvedAt: Date.now()});
   store.set('ryvar_approved', approved);
-
-  // Eliminar de pendientes
-  pending.splice(idx, 1);
+  pending.splice(idx,1);
   store.set('ryvar_pending', pending);
-
-  // Enviar al Sheet
-  await sendToSheet({ ...item, status: 'approved', approvedAt: new Date().toISOString() });
-
-  showToast('Guión aprobado y guardado');
-  loadReviewQueue();
+  await sendToSheet({...item, status:'approved', approvedAt: new Date().toISOString()});
+  showToast('Guión aprobado ✓');
+  loadQueueList();
+  updateExampleCount();
+  updateApprovedCount();
 }
-
 function rejectGuion(idx) {
   const pending = store.get('ryvar_pending') || [];
-  pending.splice(idx, 1);
+  pending.splice(idx,1);
   store.set('ryvar_pending', pending);
   showToast('Guión rechazado');
-  loadReviewQueue();
+  loadQueueList();
 }
 
 async function sendToSheet(data) {
   const url = store.get('ryvar_sheets_url');
   if (!url) return;
-  try {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-  } catch(e) { console.warn('Sheet sync failed', e); }
+  try { await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}); }
+  catch(e) { console.warn('Sheet sync failed', e); }
 }
 
-// ─── LOGIN ───────────────────────────────────────────
-let sessionTimer = null, sessionEnd = 0;
-document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+// ─── REVIEW MODAL ─────────────────────────────────────────────────────────────
+let currentReviewIdx = -1;
 
-function doLogin() {
-  const pin = document.getElementById('login-pin').value.trim();
-  const now = Date.now();
-  const codes = store.get('ryvar_pins') || [];
-  const valid = codes.some(c => c.pin===pin && (now-c.created)<SESSION_MS);
-  if (!valid) {
-    document.getElementById('login-error').style.display = 'block';
-    document.getElementById('login-pin').style.borderColor = 'var(--rojo)';
-    setTimeout(() => document.getElementById('login-pin').style.borderColor='', 2000);
-    return;
-  }
-  document.getElementById('login-error').style.display = 'none';
-  sessionEnd = Date.now() + SESSION_MS;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  startSessionTimer();
+function openReviewModal(idx) {
+  const pending = store.get('ryvar_pending') || [];
+  const item = pending[idx];
+  if (!item) return;
+  currentReviewIdx = idx;
+  const g = item.guion;
+  const sectorLabel = getSectors().find(s=>s.value===item.sector)?.label || item.sector || '—';
+  document.getElementById('rm-title').textContent = item.cliente || 'Guión';
+  document.getElementById('rm-meta').textContent =
+    `${sectorLabel} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma||''} · ${new Date(item.generatedAt||Date.now()).toLocaleString('es-DO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('rm-body').innerHTML = buildScriptHtml(g, item.tipo);
+  document.getElementById('review-modal').classList.add('visible');
+}
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.remove('visible');
+  currentReviewIdx = -1;
+}
+async function approveGuionModal() {
+  if (currentReviewIdx < 0) return;
+  await approveGuion(currentReviewIdx);
+  closeReviewModal();
+}
+function rejectGuionModal() {
+  if (currentReviewIdx < 0) return;
+  rejectGuion(currentReviewIdx);
+  closeReviewModal();
 }
 
-function doLogout() {
-  clearInterval(sessionTimer);
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-pin').value = '';
-  document.getElementById('script-output').style.display = 'none';
-  document.getElementById('output-empty').style.display = 'flex';
-}
-
-function startSessionTimer() {
-  clearInterval(sessionTimer);
-  sessionTimer = setInterval(() => {
-    const r = sessionEnd - Date.now();
-    if (r<=0) { clearInterval(sessionTimer); alert('Sesión expirada.'); doLogout(); return; }
-    const h=Math.floor(r/3600000), m=Math.floor((r%3600000)/60000), s=Math.floor((r%60000)/1000);
-    document.getElementById('session-countdown').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-  }, 1000);
-}
-const pad = n => String(n).padStart(2,'0');
-
-// ─── GENERADOR ───────────────────────────────────────
+// ─── GENERADOR ────────────────────────────────────────────────────────────────
 function updateCount(el, id) { document.getElementById(id).textContent = el.value.length; }
-let lastGuionData = null;
 
-// Traer ejemplos aprobados del sector+tipo para aprendizaje
+let lastGuionData = null;
+let sessionHistory = [];
+
 function getExamples(sector, tipo) {
   const approved = store.get('ryvar_approved') || [];
   return approved
     .filter(a => a.sector===sector && a.tipo===tipo)
-    .slice(-5) // últimos 5 aprobados del mismo sector+tipo
+    .slice(-5)
     .map(a => `EJEMPLO APROBADO:\nHook: ${a.guion.hook}\n${a.guion.hook_apellido?'Segundo golpe: '+a.guion.hook_apellido+'\n':''}Desarrollo: ${(a.guion.cuerpo||'').substring(0,200)}\nCTA: ${a.guion.cta||''}`)
     .join('\n\n---\n\n');
 }
+function updateExampleCount() {
+  const total = (store.get('ryvar_approved') || []).length;
+  document.getElementById('example-count').textContent =
+    total > 0 ? `📚 ${total} ejemplo${total>1?'s':''} aprobado${total>1?'s':''}` : '';
+}
 
 async function generarGuion() {
-  const tipo = document.getElementById('tipo-guion').value;
-  const sector = document.getElementById('sector').value;
-  const plataforma = document.getElementById('plataforma').value;
-  const duracion = document.getElementById('duracion').value;
-  const cliente = document.getElementById('cliente').value.trim();
-  const tema = document.getElementById('tema').value.trim();
-  const notas = document.getElementById('notas').value.trim();
-  const incHook = document.getElementById('inc-hook').checked;
-  const incCta = document.getElementById('inc-cta').checked;
-  const incStat = document.getElementById('inc-estadistica').checked;
-  const incReeng = document.getElementById('inc-reenganche').checked;
+  const tipo      = document.getElementById('tipo-guion').value;
+  const sector    = document.getElementById('sector').value;
+  const plataforma= document.getElementById('plataforma').value;
+  const duracion  = document.getElementById('duracion').value;
+  const cliente   = document.getElementById('cliente').value.trim();
+  const tema      = document.getElementById('tema').value.trim();
+  const notas     = document.getElementById('notas').value.trim();
+  const incHook   = document.getElementById('inc-hook').checked;
+  const incCta    = document.getElementById('inc-cta').checked;
+  const incStat   = document.getElementById('inc-estadistica').checked;
+  const incReeng  = document.getElementById('inc-reenganche').checked;
 
-  if (!tema) { highlight('tema'); return; }
+  if (!tema)   { highlight('tema');   return; }
   if (!sector) { highlight('sector'); return; }
 
-  const platLabel = {instagram:'Instagram Reels',tiktok:'TikTok',facebook:'Facebook Reels',youtube:'YouTube Shorts'}[plataforma];
-  const durLabel = {'15':'7-15 segundos','30':'15-30 segundos','60':'30-60 segundos'}[duracion];
-  const sectorLabel = SECTOR_LABELS[sector] || sector;
-  const sectorCtx = SECTOR_CONTEXT[sector] || '';
-  const elementos = [incHook&&'Hook poderoso 0-3 seg',incCta&&'CTA claro',incStat&&'Dato/estadística',incReeng&&'Reenganche 8-12 seg'].filter(Boolean).join(', ') || 'estándar';
-  const ejemplos = getExamples(sector, tipo);
+  const sectorObj   = getSectors().find(s=>s.value===sector) || {label:sector};
+  const durObj      = getDuraciones().find(d=>d.value===duracion) || {label:duracion};
+  const sectorLabel = sectorObj.label;
+  const durLabel    = durObj.label;
+  const platLabel   = {instagram:'Instagram Reels',tiktok:'TikTok',facebook:'Facebook Reels',youtube:'YouTube Shorts'}[plataforma];
+  const sectorCtx   = SECTOR_CONTEXT[sector] || 'Adaptar al contexto del cliente.';
+  const elementos   = [incHook&&'Hook poderoso 0-3 seg',incCta&&'CTA claro',incStat&&'Dato/estadística',incReeng&&'Reenganche 8-12 seg'].filter(Boolean).join(', ') || 'estándar';
+  const ejemplos    = getExamples(sector, tipo);
 
   const hooksPrompt = tipo==='numeros'
-    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo. Incomodidad = viralidad.`
+    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.`
     : `HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.`;
 
-  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
   try {
     const res = await fetch('/.netlify/functions/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 1200,
         system: `Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.
-
 ${hooksPrompt}
-
 ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.
-
 CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
-
-${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — úsalos para calibrar estilo y tono, no para copiar):\n${ejemplos}` : ''}
-
+${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — calibra estilo, no copies):\n${ejemplos}` : ''}
 RESPONDE SOLO con este JSON sin markdown ni texto extra:
-{
-  "hook": "texto del hook",
-  "hook_apellido": "segundo golpe (solo tipo números, sino string vacío)",
-  "cuerpo": "desarrollo completo listo para leer en cámara",
-  "cta": "llamado a la acción exacto",
-  "filmacion": ["sugerencia 1 de cámara/encuadre/movimiento", "sugerencia 2", "sugerencia 3"],
-  "edicion": ["sugerencia 1 de edición/cortes/efectos/música", "sugerencia 2", "sugerencia 3"],
-  "duracion_estimada": "X-Y segundos"
-}`,
-        messages: [{ role: 'user', content: `Cliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nDuración: ${durLabel}\nTipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}${notas?'\nNotas: '+notas:''}\nElementos: ${elementos}\n\nSolo el JSON.` }]
+{"hook":"texto del hook","hook_apellido":"segundo golpe (solo tipo números, sino vacío)","cuerpo":"desarrollo completo listo para leer en cámara","cta":"llamado a la acción exacto","filmacion":["sugerencia 1","sugerencia 2","sugerencia 3"],"edicion":["sugerencia 1","sugerencia 2","sugerencia 3"],"duracion_estimada":"X-Y segundos"}`,
+        messages:[{role:'user', content:`Cliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nDuración: ${durLabel}\nTipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}${notas?'\nNotas: '+notas:''}\nElementos: ${elementos}\n\nSolo el JSON.`}]
       })
     });
 
-   const text = await res.text();
-console.log('RAW:', text);
-const data = JSON.parse(text);
-        if (data.type === 'error' || data.error) { throw new Error(data.error?.message || 'Error en la API de Anthropic: ' + JSON.stringify(data)); }
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (data.type === 'error' || data.error) throw new Error(data.error?.message || 'Error API Anthropic');
+
     const raw = data.content?.find(b=>b.type==='text')?.text || '';
     let g;
     try { g = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
-    catch { g = { hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel }; }
+    catch { g = {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
 
-    lastGuionData = { guion:g, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now() };
+    lastGuionData = {guion:g, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
 
-    // Guardar en cola de pendientes
     const pending = store.get('ryvar_pending') || [];
     pending.push(lastGuionData);
     store.set('ryvar_pending', pending);
+    updatePendingBadge();
 
-    renderGuion(g, cliente, platLabel, sectorLabel, tipo);
+    renderGuion(g, cliente, platLabel, sectorLabel, tipo, durLabel);
+    addToHistory(lastGuionData);
 
   } catch(err) {
-    alert('Error al generar. Verifica la API key y tu conexión.');
+    alert('Error al generar.\n' + err.message);
     console.error(err);
   } finally {
-    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading-overlay').classList.remove('visible');
     document.getElementById('btn-gen').disabled = false;
   }
 }
@@ -639,102 +949,151 @@ const data = JSON.parse(text);
 function highlight(id) {
   const el = document.getElementById(id);
   el.focus();
-  el.style.borderColor = 'var(--rojo)';
-  setTimeout(() => el.style.borderColor='', 2000);
+  el.style.borderColor = 'var(--red)';
+  setTimeout(() => el.style.borderColor = '', 2000);
 }
 
-function renderGuion(g, cliente, plataforma, sector, tipo) {
-  document.getElementById('output-empty').style.display = 'none';
-  const out = document.getElementById('script-output');
-  out.style.display = 'block';
-  document.getElementById('out-title').textContent = cliente || 'Guión';
-  document.getElementById('out-meta').textContent = `${sector} · ${plataforma} · ${g.duracion_estimada} · ${new Date().toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
-  document.getElementById('out-chips').innerHTML = `
-    <div class="meta-chip gold">${tipo==='numeros'?'Números':'Marca'}</div>
-    <div class="meta-chip">${sector}</div>
-    <div class="meta-chip">${plataforma}</div>
-    <div class="meta-chip">${g.duracion_estimada}</div>`;
-
-  const c = document.getElementById('out-content');
-  c.innerHTML = '';
-
-  // Guión
-  const scriptSecs = [
-    {label:'Hook', text:g.hook, isHook:true},
-    (g.hook_apellido&&tipo==='numeros') ? {label:'Segundo Golpe', text:g.hook_apellido, isHook:true} : null,
-    {label:'Desarrollo', text:g.cuerpo},
-    g.cta ? {label:'CTA', text:g.cta} : null,
-  ].filter(Boolean);
-
-  scriptSecs.forEach(s => {
-    const d = document.createElement('div');
-    d.className = 'script-section';
-    d.innerHTML = `<div class="script-section-label">${s.label}</div><div class="${s.isHook?'hook-text':'script-text'}">${esc(s.text)}</div>`;
-    c.appendChild(d);
-  });
-
-  // Producción
-  if ((g.filmacion?.length||0)+(g.edicion?.length||0) > 0) {
-    const prod = document.createElement('div');
-    prod.className = 'script-section';
-    prod.innerHTML = `<div class="script-section-label">Producción</div><div class="produccion-block"></div>`;
-    const block = prod.querySelector('.produccion-block');
-
+function buildScriptHtml(g, tipo) {
+  let html = '';
+  const sec = (label, text, dotClass, isHook) => !text ? '' : `
+    <div class="script-section">
+      <div class="section-label"><span class="section-dot ${dotClass}"></span>${label}</div>
+      <div class="${isHook?'hook-text':'script-text'}">${esc(text)}</div>
+    </div>`;
+  html += sec('Hook — 0-3 segundos', g.hook, 'dot-hook', true);
+  if (g.hook_apellido && tipo==='numeros') html += sec('Segundo Golpe', g.hook_apellido, 'dot-hook', true);
+  html += sec('Desarrollo', g.cuerpo, 'dot-dev', false);
+  html += sec('CTA', g.cta, 'dot-cta', false);
+  if ((g.filmacion?.length||0) + (g.edicion?.length||0) > 0) {
+    html += `<div class="script-section"><div class="section-label"><span class="section-dot dot-prod"></span>Producción</div><div class="prod-block">`;
     if (g.filmacion?.length) {
-      const title = document.createElement('div');
-      title.style.cssText = 'font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin-bottom:8px;';
-      title.textContent = 'Filmación';
-      block.appendChild(title);
-      g.filmacion.forEach(f => {
-        const item = document.createElement('div');
-        item.className = 'produccion-item';
-        item.innerHTML = `<span class="produccion-icon">▸</span><span>${esc(f)}</span>`;
-        block.appendChild(item);
-      });
+      html += `<div class="prod-subtitle">Filmación</div>`;
+      g.filmacion.forEach(f => { html += `<div class="prod-item"><span class="prod-icon">▸</span><span>${esc(f)}</span></div>`; });
     }
-
     if (g.edicion?.length) {
-      const title = document.createElement('div');
-      title.style.cssText = 'font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin:12px 0 8px;';
-      title.textContent = 'Edición';
-      block.appendChild(title);
-      g.edicion.forEach(e => {
-        const item = document.createElement('div');
-        item.className = 'produccion-item';
-        item.innerHTML = `<span class="produccion-icon">▸</span><span>${esc(e)}</span>`;
-        block.appendChild(item);
-      });
+      html += `<div class="prod-subtitle" style="margin-top:12px">Edición</div>`;
+      g.edicion.forEach(e => { html += `<div class="prod-item"><span class="prod-icon">▸</span><span>${esc(e)}</span></div>`; });
     }
-    c.appendChild(prod);
+    html += `</div></div>`;
   }
+  return html;
+}
 
+function renderGuion(g, cliente, plataforma, sector, tipo, durLabel) {
+  document.getElementById('empty-state').style.display = 'none';
+  const out = document.getElementById('script-output');
+  out.classList.add('visible');
+  document.getElementById('out-chips').innerHTML = `
+    <span class="chip">${tipo==='numeros'?'Números':'Marca'}</span>
+    <span class="chip">${esc(sector)}</span>
+    <span class="chip">${esc(plataforma)}</span>
+    <span class="chip">${esc(g.duracion_estimada||durLabel)}</span>`;
+  document.getElementById('out-content').innerHTML = buildScriptHtml(g, tipo);
   out.scrollIntoView({behavior:'smooth'});
 }
 
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ─── HISTORIAL ────────────────────────────────────────────────────────────────
+function addToHistory(data) {
+  sessionHistory.unshift(data);
+  if (sessionHistory.length > 10) sessionHistory = sessionHistory.slice(0,10);
+  renderHistory();
+}
+function renderHistory() {
+  const scroll = document.getElementById('history-scroll');
+  if (!sessionHistory.length) {
+    scroll.innerHTML = '<div id="history-empty">Sin guiones en esta sesión</div>';
+    return;
+  }
+  scroll.innerHTML = sessionHistory.map((item,i) => `
+    <div class="history-card ${i===0?'active':''}" onclick="loadFromHistory(${item.generatedAt})">
+      <div class="history-card-title">${esc(item.cliente||'Sin nombre')}</div>
+      <div class="history-card-meta">${esc(item.plataforma||'')} · ${new Date(item.generatedAt).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+}
+function loadFromHistory(ts) {
+  const item = sessionHistory.find(h => h.generatedAt === ts);
+  if (!item) return;
+  lastGuionData = item;
+  const sectorLabel = getSectors().find(s=>s.value===item.sector)?.label || item.sector || '—';
+  const durObj = getDuraciones().find(d=>d.value===(item.duracion||'')) || {label:''};
+  renderGuion(item.guion, item.cliente, item.plataforma, sectorLabel, item.tipo, durObj.label);
+  document.querySelectorAll('.history-card').forEach(c=>c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
 
+// ─── COPY & REVIEW ────────────────────────────────────────────────────────────
 function copyScript() {
   if (!lastGuionData) return;
   const g = lastGuionData.guion;
   let t = '';
-  if (g.hook) t += `HOOK:\n${g.hook}\n\n`;
-  if (g.hook_apellido) t += `SEGUNDO GOLPE:\n${g.hook_apellido}\n\n`;
-  if (g.cuerpo) t += `DESARROLLO:\n${g.cuerpo}\n\n`;
-  if (g.cta) t += `CTA:\n${g.cta}\n\n`;
+  if (g.hook)           t += `HOOK:\n${g.hook}\n\n`;
+  if (g.hook_apellido)  t += `SEGUNDO GOLPE:\n${g.hook_apellido}\n\n`;
+  if (g.cuerpo)         t += `DESARROLLO:\n${g.cuerpo}\n\n`;
+  if (g.cta)            t += `CTA:\n${g.cta}\n\n`;
   if (g.filmacion?.length) t += `FILMACIÓN:\n${g.filmacion.map(f=>`• ${f}`).join('\n')}\n\n`;
-  if (g.edicion?.length) t += `EDICIÓN:\n${g.edicion.map(e=>`• ${e}`).join('\n')}`;
-  navigator.clipboard.writeText(t.trim()).then(() => {
-    const b = document.querySelector('.btn-copy');
-    b.textContent = '✓ Copiado';
-    setTimeout(() => b.textContent = 'Copiar todo', 2000);
-  });
+  if (g.edicion?.length)   t += `EDICIÓN:\n${g.edicion.map(e=>`• ${e}`).join('\n')}`;
+  navigator.clipboard.writeText(t.trim()).then(() => showToast('Guión copiado'));
+}
+function sendToReview() {
+  if (!lastGuionData) return;
+  const pending = store.get('ryvar_pending') || [];
+  const already = pending.find(p => p.generatedAt === lastGuionData.generatedAt);
+  if (already) return showToast('Ya está en la cola de revisión');
+  pending.push(lastGuionData);
+  store.set('ryvar_pending', pending);
+  updatePendingBadge();
+  showToast('Enviado a cola de revisión ✓');
+  const webhook = store.get('ryvar_sheets_url');
+  if (webhook) sendToSheet({...lastGuionData, status:'pending'});
 }
 
+// ─── UTILS ───────────────────────────────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.display = 'block';
-  setTimeout(() => t.style.display='none', 2500);
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.display='none', 2800);
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeReviewModal(); closeAdminAuth(); closeFirstAccess(); }
+});
+
+// ─── PRIMER ACCESO (admin sin PIN) ────────────────────────────────────────────
+function openFirstAccess() {
+  const modal = document.getElementById('first-access-modal');
+  modal.style.display = 'flex';
+  document.getElementById('first-access-pw').value = '';
+  document.getElementById('first-access-error').textContent = '';
+  setTimeout(() => document.getElementById('first-access-pw').focus(), 100);
+}
+function closeFirstAccess() {
+  document.getElementById('first-access-modal').style.display = 'none';
+}
+function doFirstAccess() {
+  const pw = document.getElementById('first-access-pw').value;
+  if (pw !== getAdminPw()) {
+    document.getElementById('first-access-error').textContent = 'Contraseña incorrecta';
+    document.getElementById('first-access-pw').value = '';
+    document.getElementById('first-access-pw').focus();
+    return;
+  }
+  closeFirstAccess();
+  // Entrar al app en modo admin (sin sesión de empleado)
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('admin-btn').classList.add('show');
+  loadSectorSelect();
+  loadDuracionSelect();
+  updateExampleCount();
+  updatePendingBadge();
+  const sessionEnd = Date.now() + SESSION_MS;
+  startSessionTimer(sessionEnd);
+  // Abrir panel admin directamente
+  openAdmin();
 }
 </script>
 </body>
