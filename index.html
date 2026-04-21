@@ -894,38 +894,37 @@ async function generarGuion() {
   const ejemplos    = getExamples(sector, tipo);
 
   const hooksPrompt = tipo==='numeros'
-    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.`
+    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala. El segundo golpe debe funcionar solo.`
     : `HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.`;
 
   document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
   try {
-    const res = await fetch('/.netlify/functions/generate', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+    const response = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1200,
-        system: `Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.
-${hooksPrompt}
-ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.
-CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
-${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — calibra estilo, no copies):\n${ejemplos}` : ''}
-RESPONDE SOLO con este JSON sin markdown ni texto extra:
-{"hook":"texto del hook","hook_apellido":"segundo golpe (solo tipo números, sino vacío)","cuerpo":"desarrollo completo listo para leer en cámara","cta":"llamado a la acción exacto","filmacion":["sugerencia 1","sugerencia 2","sugerencia 3"],"edicion":["sugerencia 1","sugerencia 2","sugerencia 3"],"duracion_estimada":"X-Y segundos"}`,
-        messages:[{role:'user', content:`Cliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nDuración: ${durLabel}\nTipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}${notas?'\nNotas: '+notas:''}\nElementos: ${elementos}\n\nSolo el JSON.`}]
+        prompt: `Genera un guión para ${cliente || 'un cliente'}. Sector: ${sectorLabel}. Plataforma: ${platLabel}. Tipo: ${tipo}. Tema: ${tema}. Notas: ${notas}. Elementos: ${elementos}. Contexto: ${sectorCtx}. Referencias: ${ejemplos}`,
+        systemPrompt: `Eres el estratega de Ryvar Media. Responde ÚNICAMENTE con un JSON válido con esta estructura: {"hook":"","hook_apellido":"","cuerpo":"","cta":"","filmacion":[],"edicion":[],"duracion_estimada":""}. No incluyas explicaciones ni markdown.`
       })
     });
 
-    const text = await res.text();
-    const data = JSON.parse(text);
-    if (data.type === 'error' || data.error) throw new Error(data.error?.message || 'Error API Anthropic');
+    // Validamos si la respuesta es exitosa antes de parsear
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Error servidor (${response.status}): ${errorBody.substring(0, 50)}...`);
+    }
 
-    const raw = data.content?.find(b=>b.type==='text')?.text || '';
-    let g;
-    try { g = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
-    catch { g = {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
+    const data = await response.json();
+    
+    // Si la función devuelve el objeto de Anthropic, extraemos el texto
+    let rawContent = data.content?.[0]?.text || data.text || data;
+    if (typeof rawContent !== 'string') rawContent = JSON.stringify(rawContent);
+
+    // Limpieza de posibles etiquetas de markdown
+    const jsonString = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    const g = JSON.parse(jsonString);
 
     lastGuionData = {guion:g, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
 
@@ -938,8 +937,8 @@ RESPONDE SOLO con este JSON sin markdown ni texto extra:
     addToHistory(lastGuionData);
 
   } catch(err) {
-    alert('Error al generar.\n' + err.message);
-    console.error(err);
+    console.error("Detalle del error:", err);
+    alert('Error al generar: ' + err.message);
   } finally {
     document.getElementById('loading-overlay').classList.remove('visible');
     document.getElementById('btn-gen').disabled = false;
