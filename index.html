@@ -609,7 +609,9 @@ RESPONDE SOLO con este JSON sin markdown ni texto extra:
       })
     });
 
-    const data = await res.json();
+   const text = await res.text();
+console.log('RAW:', text);
+const data = JSON.parse(text);
         if (data.type === 'error' || data.error) { throw new Error(data.error?.message || 'Error en la API de Anthropic: ' + JSON.stringify(data)); }
     const raw = data.content?.find(b=>b.type==='text')?.text || '';
     let g;
