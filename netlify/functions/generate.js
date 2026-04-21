@@ -7,6 +7,8 @@ exports.handler = function(event, context, callback) {
 
   const body = event.body || '';
   const bodyBuffer = Buffer.from(body, 'utf8');
+  console.log('KEY EXISTS:', !!process.env.ANTHROPIC_API_KEY);
+console.log('KEY START:', (process.env.ANTHROPIC_API_KEY || '').substring(0, 10));
 
   const options = {
     hostname: 'api.anthropic.com',
