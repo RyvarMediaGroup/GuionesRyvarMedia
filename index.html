@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ryvar — Generador de Guiones</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blanco: #FFFFFF;
+    --negro: #0a0a0a;
+    --dorado: #B59A72;
+    --dorado-sat: #C4A55A;
+    --gris-medio: #1a1a1a;
+    --gris-borde: #2a2a2a;
+    --texto-dim: #666666;
+    --verde: #2ecc71;
+    --rojo: #e05555;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--negro); color: var(--blanco); font-family: 'Montserrat', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  /* ── LOGIN ── */
+  #login-screen { position: fixed; inset: 0; background: var(--negro); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .login-card { width: 420px; max-width: 95vw; border: 1px solid var(--gris-borde); background: var(--gris-medio); padding: 48px 40px 40px; position: relative; }
+  .login-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--dorado-sat), transparent); }
+  .login-logo { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 600; letter-spacing: 6px; text-transform: uppercase; color: var(--dorado); margin-bottom: 32px; }
+  .login-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 700; line-height: 1.1; margin-bottom: 8px; }
+  .login-sub { font-size: 11px; color: var(--texto-dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 36px; }
+  .field-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--dorado); margin-bottom: 8px; display: block; }
+  .field-input { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 28px; padding: 14px 16px; outline: none; transition: border-color 0.2s; letter-spacing: 10px; text-align: center; }
+  .field-input:focus { border-color: var(--dorado); }
+  .field-input::placeholder { letter-spacing: 2px; color: #333; font-size: 14px; }
+  .field-group { margin-bottom: 24px; }
+  .timer-badge { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--texto-dim); letter-spacing: 1px; margin-bottom: 28px; }
+  .timer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dorado-sat); animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .btn-primary { width: 100%; background: var(--dorado-sat); color: var(--negro); border: none; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 16px; cursor: pointer; transition: background 0.2s; }
+  .btn-primary:hover { background: var(--dorado); }
+  .error-msg { font-size: 11px; color: var(--rojo); letter-spacing: 1px; margin-top: 12px; display: none; text-align: center; }
+
+  /* ── ADMIN FLOATING ── */
+  #admin-panel { position: fixed; bottom: 24px; right: 24px; z-index: 200; }
+  .admin-toggle { width: 44px; height: 44px; border-radius: 50%; background: var(--gris-medio); border: 1px solid var(--gris-borde); color: var(--dorado); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
+  .admin-toggle:hover { border-color: var(--dorado); }
+  .admin-card { position: absolute; bottom: 56px; right: 0; width: 320px; background: var(--gris-medio); border: 1px solid var(--gris-borde); padding: 24px; display: none; max-height: 80vh; overflow-y: auto; }
+  .admin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--dorado-sat),transparent); }
+  .admin-card.open { display: block; }
+  .admin-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 16px; }
+  .admin-pw { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 13px; padding: 10px 12px; outline: none; margin-bottom: 10px; transition: border-color 0.2s; }
+  .admin-pw:focus { border-color: var(--dorado); }
+  .btn-admin { width: 100%; background: var(--negro); border: 1px solid var(--dorado-sat); color: var(--dorado-sat); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 8px; }
+  .btn-admin:hover { background: var(--dorado-sat); color: var(--negro); }
+  .btn-admin.danger { border-color: var(--rojo); color: var(--rojo); }
+  .btn-admin.danger:hover { background: var(--rojo); color: var(--blanco); }
+  .generated-pin { display: none; margin-top: 16px; padding: 16px; background: var(--negro); border: 1px solid var(--dorado); text-align: center; }
+  .pin-display { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 700; color: var(--dorado-sat); letter-spacing: 10px; }
+  .pin-expiry { font-size: 10px; color: var(--texto-dim); letter-spacing: 1px; margin-top: 6px; }
+  .btn-copy-pin { width: 100%; background: none; border: 1px solid var(--gris-borde); color: var(--texto-dim); font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
+  .btn-copy-pin:hover { border-color: var(--dorado); color: var(--dorado); }
+  .admin-error { font-size: 11px; color: var(--rojo); text-align: center; margin-top: 8px; display: none; }
+  .admin-divider { border: none; border-top: 1px solid var(--gris-borde); margin: 16px 0; }
+
+  /* REVIEW QUEUE */
+  .review-count { font-size: 11px; color: var(--texto-dim); margin-bottom: 12px; }
+  .review-item { background: var(--negro); border: 1px solid var(--gris-borde); padding: 14px; margin-bottom: 10px; }
+  .review-item-meta { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--dorado); margin-bottom: 8px; }
+  .review-item-hook { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; color: var(--blanco); margin-bottom: 6px; line-height: 1.3; }
+  .review-item-snippet { font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 10px; }
+  .review-actions { display: flex; gap: 8px; }
+  .btn-approve { flex: 1; background: none; border: 1px solid var(--verde); color: var(--verde); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; }
+  .btn-approve:hover { background: var(--verde); color: var(--negro); }
+  .btn-reject { flex: 1; background: none; border: 1px solid var(--rojo); color: var(--rojo); font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px; cursor: pointer; transition: all 0.2s; }
+  .btn-reject:hover { background: var(--rojo); color: var(--blanco); }
+  .empty-queue { font-size: 11px; color: var(--texto-dim); text-align: center; padding: 16px; letter-spacing: 1px; }
+
+  /* ── APP ── */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+  .header { border-bottom: 1px solid var(--gris-borde); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; background: var(--gris-medio); position: sticky; top: 0; z-index: 10; }
+  .header-brand { font-family: 'Cormorant Garamond', serif; font-size: 11px; font-weight: 600; letter-spacing: 5px; text-transform: uppercase; color: var(--dorado); }
+  .header-title { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--texto-dim); }
+  .header-session { display: flex; align-items: center; gap: 16px; }
+  .session-timer { font-size: 10px; letter-spacing: 1px; color: var(--dorado); display: flex; align-items: center; gap: 6px; }
+  .btn-logout { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--texto-dim); background: none; border: 1px solid var(--gris-borde); padding: 6px 14px; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.2s; }
+  .btn-logout:hover { border-color: var(--dorado); color: var(--dorado); }
+  .main { display: grid; grid-template-columns: 400px 1fr; min-height: calc(100vh - 65px); }
+
+  /* LEFT PANEL */
+  .panel-left { border-right: 1px solid var(--gris-borde); padding: 32px; background: var(--gris-medio); overflow-y: auto; }
+  .panel-section { margin-bottom: 24px; }
+  .panel-section-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gris-borde); }
+  .select-field, .textarea-field, .input-field { width: 100%; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco); font-family: 'Montserrat', sans-serif; font-size: 12px; padding: 12px 14px; outline: none; transition: border-color 0.2s; appearance: none; -webkit-appearance: none; }
+  .select-field:focus, .textarea-field:focus, .input-field:focus { border-color: var(--dorado); }
+  .select-field option { background: var(--negro); }
+  .textarea-field { resize: vertical; min-height: 90px; line-height: 1.6; }
+  .input-field { margin-bottom: 10px; }
+  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 12px; color: #aaa; transition: color 0.2s; }
+  .checkbox-item:hover { color: var(--blanco); }
+  .checkbox-item input { width: 14px; height: 14px; accent-color: var(--dorado-sat); cursor: pointer; }
+  .char-count { font-size: 10px; color: var(--texto-dim); text-align: right; margin-top: 4px; }
+  .btn-generate { width: 100%; background: var(--negro); border: 1px solid var(--dorado-sat); color: var(--dorado-sat); font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 16px; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+  .btn-generate:hover { background: var(--dorado-sat); color: var(--negro); }
+  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* RIGHT PANEL */
+  .panel-right { padding: 40px; overflow-y: auto; background: var(--negro); }
+  .output-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .output-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; }
+  .output-meta { font-size: 10px; letter-spacing: 2px; color: var(--texto-dim); text-transform: uppercase; margin-top: 4px; }
+  .btn-copy { background: none; border: 1px solid var(--gris-borde); color: var(--texto-dim); font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 16px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .btn-copy:hover { border-color: var(--dorado); color: var(--dorado); }
+  .output-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; color: var(--texto-dim); }
+  .output-empty-icon { font-size: 40px; opacity: 0.3; }
+  .output-empty-text { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; }
+  .script-output { display: none; }
+  .script-meta-bar { display: flex; gap: 10px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--gris-borde); flex-wrap: wrap; }
+  .meta-chip { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 6px 12px; border: 1px solid var(--gris-borde); color: var(--texto-dim); }
+  .meta-chip.gold { border-color: var(--dorado); color: var(--dorado); }
+  .script-section { margin-bottom: 28px; }
+  .script-section-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--dorado); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .script-section-label::after { content: ''; flex: 1; height: 1px; background: var(--gris-borde); }
+  .script-text { font-size: 14px; line-height: 1.8; color: #e0e0e0; white-space: pre-wrap; }
+  .hook-text { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--blanco); line-height: 1.4; border-left: 2px solid var(--dorado-sat); padding-left: 20px; }
+  .produccion-block { background: #111; border: 1px solid var(--gris-borde); padding: 16px; }
+  .produccion-item { display: flex; gap: 12px; margin-bottom: 10px; font-size: 12px; line-height: 1.6; color: #bbb; }
+  .produccion-item:last-child { margin-bottom: 0; }
+  .produccion-icon { color: var(--dorado); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* LOADING */
+  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
+  .loading-text { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--dorado); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .loading-bar { width: 200px; height: 1px; background: var(--gris-borde); position: relative; overflow: hidden; }
+  .loading-bar::after { content:''; position:absolute; left:-50%; top:0; width:50%; height:100%; background:var(--dorado-sat); animation:slide 1.2s infinite linear; }
+  @keyframes slide { to{left:150%} }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--gris-medio); border: 1px solid var(--dorado); color: var(--dorado); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; display: none; z-index: 300; }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--gris-borde); }
+    .header { padding: 16px 20px; }
+    .header-title { display: none; }
+    .panel-right, .panel-left { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Ryvar Media Group</div>
+    <div class="login-title">Generador<br>de Guiones</div>
+    <div class="login-sub">Acceso restringido · Equipo interno</div>
+    <div class="field-group">
+      <label class="field-label">PIN de acceso</label>
+      <input type="password" class="field-input" id="login-pin" placeholder="······" maxlength="6" inputmode="numeric">
+    </div>
+    <div class="timer-badge">
+      <div class="timer-dot"></div>
+      <span>Los PINs expiran 3 horas después de ser generados</span>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Ingresar</button>
+    <div class="error-msg" id="login-error">PIN incorrecto o expirado. Solicita uno nuevo.</div>
+  </div>
+</div>
+
+<!-- ADMIN FLOATING -->
+<div id="admin-panel">
+  <button class="admin-toggle" onclick="toggleAdmin()" title="Admin">⚙</button>
+  <div class="admin-card" id="admin-card">
+    <div class="admin-title">Panel Administrador</div>
+    <div id="admin-auth">
+      <input type="password" class="admin-pw" id="admin-pw" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter') unlockAdmin()">
+      <button class="btn-admin" onclick="unlockAdmin()">Verificar</button>
+      <div class="admin-error" id="admin-error">Contraseña incorrecta</div>
+    </div>
+    <div id="admin-content" style="display:none;">
+
+      <!-- GENERAR PIN -->
+      <div class="admin-title" style="margin-top:0;">Acceso de empleados</div>
+      <button class="btn-admin" onclick="generateNewPin()">✦ Generar nuevo PIN</button>
+      <div class="generated-pin" id="generated-pin">
+        <div class="pin-display" id="pin-display">——</div>
+        <div class="pin-expiry" id="pin-expiry"></div>
+        <button class="btn-copy-pin" onclick="copyPin()">Copiar PIN</button>
+      </div>
+
+      <hr class="admin-divider">
+
+      <!-- REVISAR GUIONES -->
+      <div class="admin-title">Guiones pendientes de revisión</div>
+      <div class="review-count" id="review-count">Cargando...</div>
+      <div id="review-list"></div>
+
+      <hr class="admin-divider">
+
+      <!-- SHEETS WEBHOOK -->
+      <div class="admin-title">Google Sheets Webhook</div>
+      <input type="text" class="admin-pw" id="sheets-url" placeholder="URL del Apps Script Web App" style="font-size:11px; letter-spacing:0;">
+      <button class="btn-admin" onclick="saveSheetUrl()">Guardar URL</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-text">Generando guión</div>
+  <div class="loading-bar"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- APP -->
+<div id="app" style="display:none; flex-direction:column;">
+  <div class="header">
+    <div class="header-brand">Ryvar Media Group</div>
+    <div class="header-title">Generador de Guiones</div>
+    <div class="header-session">
+      <div class="session-timer">
+        <div class="timer-dot"></div>
+        <span id="session-countdown">3:00:00</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- LEFT -->
+    <div class="panel-left">
+
+      <div class="panel-section">
+        <div class="panel-section-label">Tipo de guión</div>
+        <select class="select-field" id="tipo-guion">
+          <option value="marca">Marca — corporativo / credibilidad / venta directa</option>
+          <option value="numeros">Números — viralidad / exposición masiva</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Sector</div>
+        <select class="select-field" id="sector">
+          <option value="">— Selecciona el sector —</option>
+          <option value="consultoria_financiera">Consultoría financiera</option>
+          <option value="venta_gomas">Venta de gomas / neumáticos</option>
+          <option value="retail_moda">Retail de moda</option>
+          <option value="agencia_marketing">Agencia de marketing</option>
+          <option value="influencer_comida">Influencer de comida</option>
+          <option value="influencer_lifestyle">Influencer de lifestyle</option>
+          <option value="paneles_solares">Paneles solares</option>
+          <option value="climatizacion">Climatización y refrigeración</option>
+          <option value="decoracion_eventos">Decoración de eventos</option>
+          <option value="inmobiliario">Inmobiliario / Real estate</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Plataforma objetivo</div>
+        <select class="select-field" id="plataforma">
+          <option value="instagram">Instagram Reels</option>
+          <option value="tiktok">TikTok</option>
+          <option value="facebook">Facebook Reels</option>
+          <option value="youtube">YouTube Shorts</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Duración</div>
+        <select class="select-field" id="duracion">
+          <option value="15">7-15 seg — máxima viralidad</option>
+          <option value="30">15-30 seg — educativo / marca</option>
+          <option value="60">30-60 seg — contenido profundo</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Cliente / Marca</div>
+        <input type="text" class="input-field" id="cliente" placeholder="Nombre del cliente o marca">
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Tema del guión</div>
+        <textarea class="textarea-field" id="tema" placeholder="Describe el tema, mensaje o producto que quieres comunicar..." oninput="updateCount(this,'tema-count')"></textarea>
+        <div class="char-count"><span id="tema-count">0</span> caracteres</div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Elementos a incluir</div>
+        <div class="checkbox-group">
+          <label class="checkbox-item"><input type="checkbox" id="inc-hook" checked> Hook de apertura fuerte</label>
+          <label class="checkbox-item"><input type="checkbox" id="inc-cta" checked> CTA claro al final</label>
+          <label class="checkbox-item"><input type="checkbox" id="inc-estadistica"> Dato / estadística de impacto</label>
+          <label class="checkbox-item"><input type="checkbox" id="inc-reenganche"> Reenganche (seg 8-12)</label>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-label">Notas adicionales</div>
+        <textarea class="textarea-field" id="notas" placeholder="Tono especial, palabras a evitar, referencias..." style="min-height:70px;" oninput="updateCount(this,'notas-count')"></textarea>
+        <div class="char-count"><span id="notas-count">0</span> caracteres</div>
+      </div>
+
+      <button class="btn-generate" id="btn-gen" onclick="generarGuion()">✦ Generar Guión</button>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel-right">
+      <div class="output-empty" id="output-empty">
+        <div class="output-empty-icon">✦</div>
+        <div class="output-empty-text">Aquí aparecerá tu guión</div>
+      </div>
+      <div class="script-output" id="script-output">
+        <div class="output-header">
+          <div>
+            <div class="output-title" id="out-title">Guión</div>
+            <div class="output-meta" id="out-meta">—</div>
+          </div>
+          <button class="btn-copy" onclick="copyScript()">Copiar todo</button>
+        </div>
+        <div class="script-meta-bar" id="out-chips"></div>
+        <div id="out-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────
+const SESSION_MS = 3 * 60 * 60 * 1000;
+const ADMIN_PASSWORD = 'ryvar2024'; // Cambia esto
+const ANTHROPIC_API_KEY = 'TU_API_KEY_AQUI'; // Reemplaza con tu key
+
+const SECTOR_LABELS = {
+  consultoria_financiera: 'Consultoría financiera',
+  venta_gomas: 'Venta de gomas',
+  retail_moda: 'Retail de moda',
+  agencia_marketing: 'Agencia de marketing',
+  influencer_comida: 'Influencer de comida',
+  influencer_lifestyle: 'Influencer de lifestyle',
+  paneles_solares: 'Paneles solares',
+  climatizacion: 'Climatización y refrigeración',
+  decoracion_eventos: 'Decoración de eventos',
+  inmobiliario: 'Inmobiliario',
+  otro: 'Otro'
+};
+
+// Contexto de sector para prompt
+const SECTOR_CONTEXT = {
+  consultoria_financiera: 'Audiencia profesional, busca credibilidad y resultados tangibles. Lenguaje técnico pero accesible. El dolor es el miedo a perder dinero o estancarse.',
+  venta_gomas: 'Audiencia práctica, decide por precio/calidad/seguridad. Lenguaje directo. El dolor es el riesgo en carretera y el gasto inesperado.',
+  retail_moda: 'Audiencia aspiracional, compra identidad no producto. Lenguaje visual y emocional. El dolor es no verse como quiere.',
+  agencia_marketing: 'Audiencia empresarial escéptica, ha visto muchas promesas. Necesita prueba social y números reales.',
+  influencer_comida: 'Audiencia curiosa y hambrienta. Lenguaje coloquial, sensorial. El gancho es la experiencia y el descubrimiento.',
+  influencer_lifestyle: 'Audiencia aspiracional, busca inspiración. Lenguaje cercano y auténtico. Vende experiencias y momentos.',
+  paneles_solares: 'Audiencia orientada al ahorro y sostenibilidad. El dolor es la factura eléctrica. Necesita ROI claro.',
+  climatizacion: 'Audiencia con problema concreto: calor o frío. Lenguaje técnico-práctico. Vende confort y eficiencia.',
+  decoracion_eventos: 'Audiencia emocional, compra sueños. El dolor es el miedo a que el evento no quede perfecto.',
+  inmobiliario: 'Audiencia con decisión de alto impacto. Necesita confianza y claridad. El dolor es el miedo a equivocarse.',
+  otro: 'Adaptar al contexto específico del cliente.'
+};
+
+// ─── STORAGE HELPERS ────────────────────────────────
+const store = {
+  get: k => JSON.parse(localStorage.getItem(k) || 'null'),
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+// ─── ADMIN ──────────────────────────────────────────
+function toggleAdmin() {
+  const card = document.getElementById('admin-card');
+  card.classList.toggle('open');
+  if (card.classList.contains('open')) loadReviewQueue();
+}
+
+function unlockAdmin() {
+  if (document.getElementById('admin-pw').value === ADMIN_PASSWORD) {
+    document.getElementById('admin-auth').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    const savedUrl = store.get('ryvar_sheets_url');
+    if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
+    loadReviewQueue();
+  } else {
+    document.getElementById('admin-error').style.display = 'block';
+  }
+}
+
+function saveSheetUrl() {
+  const url = document.getElementById('sheets-url').value.trim();
+  if (url) { store.set('ryvar_sheets_url', url); showToast('URL guardada'); }
+}
+
+function generateNewPin() {
+  const pin = String(Math.floor(100000 + Math.random() * 900000));
+  const now = Date.now();
+  const codes = (store.get('ryvar_pins') || []).filter(c => (now - c.created) < SESSION_MS);
+  codes.push({ pin, created: now });
+  store.set('ryvar_pins', codes);
+  document.getElementById('pin-display').textContent = pin;
+  const exp = new Date(now + SESSION_MS);
+  document.getElementById('pin-expiry').textContent = `Expira a las ${exp.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('generated-pin').style.display = 'block';
+}
+
+function copyPin() {
+  navigator.clipboard.writeText(document.getElementById('pin-display').textContent).then(() => {
+    const b = document.querySelector('.btn-copy-pin');
+    b.textContent = '✓ Copiado';
+    setTimeout(() => b.textContent = 'Copiar PIN', 2000);
+  });
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('admin-panel').contains(e.target))
+    document.getElementById('admin-card').classList.remove('open');
+});
+
+// ─── REVIEW QUEUE ────────────────────────────────────
+function loadReviewQueue() {
+  const pending = store.get('ryvar_pending') || [];
+  const countEl = document.getElementById('review-count');
+  const listEl = document.getElementById('review-list');
+
+  if (!pending.length) {
+    countEl.textContent = 'No hay guiones pendientes';
+    listEl.innerHTML = '<div class="empty-queue">Los guiones generados por el equipo aparecerán aquí para tu aprobación</div>';
+    return;
+  }
+
+  countEl.textContent = `${pending.length} guión${pending.length>1?'es':''} pendiente${pending.length>1?'s':''}`;
+  listEl.innerHTML = '';
+
+  pending.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'review-item';
+    div.innerHTML = `
+      <div class="review-item-meta">${SECTOR_LABELS[item.sector]||item.sector} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma}</div>
+      <div class="review-item-hook">${esc(item.guion.hook)}</div>
+      ${item.guion.hook_apellido ? `<div class="review-item-snippet" style="color:var(--dorado-sat);font-style:italic;">${esc(item.guion.hook_apellido)}</div>` : ''}
+      <div class="review-item-snippet">${esc((item.guion.cuerpo||'').substring(0,120))}...</div>
+      <div class="review-actions">
+        <button class="btn-approve" onclick="approveGuion(${idx})">✓ Aprobar</button>
+        <button class="btn-reject" onclick="rejectGuion(${idx})">✗ Rechazar</button>
+      </div>`;
+    listEl.appendChild(div);
+  });
+}
+
+async function approveGuion(idx) {
+  const pending = store.get('ryvar_pending') || [];
+  const item = pending[idx];
+  if (!item) return;
+
+  // Guardar en aprobados
+  const approved = store.get('ryvar_approved') || [];
+  approved.push({ ...item, approvedAt: Date.now() });
+  store.set('ryvar_approved', approved);
+
+  // Eliminar de pendientes
+  pending.splice(idx, 1);
+  store.set('ryvar_pending', pending);
+
+  // Enviar al Sheet
+  await sendToSheet({ ...item, status: 'approved', approvedAt: new Date().toISOString() });
+
+  showToast('Guión aprobado y guardado');
+  loadReviewQueue();
+}
+
+function rejectGuion(idx) {
+  const pending = store.get('ryvar_pending') || [];
+  pending.splice(idx, 1);
+  store.set('ryvar_pending', pending);
+  showToast('Guión rechazado');
+  loadReviewQueue();
+}
+
+async function sendToSheet(data) {
+  const url = store.get('ryvar_sheets_url');
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch(e) { console.warn('Sheet sync failed', e); }
+}
+
+// ─── LOGIN ───────────────────────────────────────────
+let sessionTimer = null, sessionEnd = 0;
+document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogin() {
+  const pin = document.getElementById('login-pin').value.trim();
+  const now = Date.now();
+  const codes = store.get('ryvar_pins') || [];
+  const valid = codes.some(c => c.pin===pin && (now-c.created)<SESSION_MS);
+  if (!valid) {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-pin').style.borderColor = 'var(--rojo)';
+    setTimeout(() => document.getElementById('login-pin').style.borderColor='', 2000);
+    return;
+  }
+  document.getElementById('login-error').style.display = 'none';
+  sessionEnd = Date.now() + SESSION_MS;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  startSessionTimer();
+}
+
+function doLogout() {
+  clearInterval(sessionTimer);
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-pin').value = '';
+  document.getElementById('script-output').style.display = 'none';
+  document.getElementById('output-empty').style.display = 'flex';
+}
+
+function startSessionTimer() {
+  clearInterval(sessionTimer);
+  sessionTimer = setInterval(() => {
+    const r = sessionEnd - Date.now();
+    if (r<=0) { clearInterval(sessionTimer); alert('Sesión expirada.'); doLogout(); return; }
+    const h=Math.floor(r/3600000), m=Math.floor((r%3600000)/60000), s=Math.floor((r%60000)/1000);
+    document.getElementById('session-countdown').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }, 1000);
+}
+const pad = n => String(n).padStart(2,'0');
+
+// ─── GENERADOR ───────────────────────────────────────
+function updateCount(el, id) { document.getElementById(id).textContent = el.value.length; }
+let lastGuionData = null;
+
+// Traer ejemplos aprobados del sector+tipo para aprendizaje
+function getExamples(sector, tipo) {
+  const approved = store.get('ryvar_approved') || [];
+  return approved
+    .filter(a => a.sector===sector && a.tipo===tipo)
+    .slice(-5) // últimos 5 aprobados del mismo sector+tipo
+    .map(a => `EJEMPLO APROBADO:\nHook: ${a.guion.hook}\n${a.guion.hook_apellido?'Segundo golpe: '+a.guion.hook_apellido+'\n':''}Desarrollo: ${(a.guion.cuerpo||'').substring(0,200)}\nCTA: ${a.guion.cta||''}`)
+    .join('\n\n---\n\n');
+}
+
+async function generarGuion() {
+  const tipo = document.getElementById('tipo-guion').value;
+  const sector = document.getElementById('sector').value;
+  const plataforma = document.getElementById('plataforma').value;
+  const duracion = document.getElementById('duracion').value;
+  const cliente = document.getElementById('cliente').value.trim();
+  const tema = document.getElementById('tema').value.trim();
+  const notas = document.getElementById('notas').value.trim();
+  const incHook = document.getElementById('inc-hook').checked;
+  const incCta = document.getElementById('inc-cta').checked;
+  const incStat = document.getElementById('inc-estadistica').checked;
+  const incReeng = document.getElementById('inc-reenganche').checked;
+
+  if (!tema) { highlight('tema'); return; }
+  if (!sector) { highlight('sector'); return; }
+
+  const platLabel = {instagram:'Instagram Reels',tiktok:'TikTok',facebook:'Facebook Reels',youtube:'YouTube Shorts'}[plataforma];
+  const durLabel = {'15':'7-15 segundos','30':'15-30 segundos','60':'30-60 segundos'}[duracion];
+  const sectorLabel = SECTOR_LABELS[sector] || sector;
+  const sectorCtx = SECTOR_CONTEXT[sector] || '';
+  const elementos = [incHook&&'Hook poderoso 0-3 seg',incCta&&'CTA claro',incStat&&'Dato/estadística',incReeng&&'Reenganche 8-12 seg'].filter(Boolean).join(', ') || 'estándar';
+  const ejemplos = getExamples(sector, tipo);
+
+  const hooksPrompt = tipo==='numeros'
+    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo. Incomodidad = viralidad.`
+    : `HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.`;
+
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('btn-gen').disabled = true;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        system: `Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.
+
+${hooksPrompt}
+
+ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.
+
+CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
+
+${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — úsalos para calibrar estilo y tono, no para copiar):\n${ejemplos}` : ''}
+
+RESPONDE SOLO con este JSON sin markdown ni texto extra:
+{
+  "hook": "texto del hook",
+  "hook_apellido": "segundo golpe (solo tipo números, sino string vacío)",
+  "cuerpo": "desarrollo completo listo para leer en cámara",
+  "cta": "llamado a la acción exacto",
+  "filmacion": ["sugerencia 1 de cámara/encuadre/movimiento", "sugerencia 2", "sugerencia 3"],
+  "edicion": ["sugerencia 1 de edición/cortes/efectos/música", "sugerencia 2", "sugerencia 3"],
+  "duracion_estimada": "X-Y segundos"
+}`,
+        messages: [{ role: 'user', content: `Cliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nDuración: ${durLabel}\nTipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}${notas?'\nNotas: '+notas:''}\nElementos: ${elementos}\n\nSolo el JSON.` }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data.content?.find(b=>b.type==='text')?.text || '';
+    let g;
+    try { g = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
+    catch { g = { hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel }; }
+
+    lastGuionData = { guion:g, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now() };
+
+    // Guardar en cola de pendientes
+    const pending = store.get('ryvar_pending') || [];
+    pending.push(lastGuionData);
+    store.set('ryvar_pending', pending);
+
+    renderGuion(g, cliente, platLabel, sectorLabel, tipo);
+
+  } catch(err) {
+    alert('Error al generar. Verifica la API key y tu conexión.');
+    console.error(err);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('btn-gen').disabled = false;
+  }
+}
+
+function highlight(id) {
+  const el = document.getElementById(id);
+  el.focus();
+  el.style.borderColor = 'var(--rojo)';
+  setTimeout(() => el.style.borderColor='', 2000);
+}
+
+function renderGuion(g, cliente, plataforma, sector, tipo) {
+  document.getElementById('output-empty').style.display = 'none';
+  const out = document.getElementById('script-output');
+  out.style.display = 'block';
+  document.getElementById('out-title').textContent = cliente || 'Guión';
+  document.getElementById('out-meta').textContent = `${sector} · ${plataforma} · ${g.duracion_estimada} · ${new Date().toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('out-chips').innerHTML = `
+    <div class="meta-chip gold">${tipo==='numeros'?'Números':'Marca'}</div>
+    <div class="meta-chip">${sector}</div>
+    <div class="meta-chip">${plataforma}</div>
+    <div class="meta-chip">${g.duracion_estimada}</div>`;
+
+  const c = document.getElementById('out-content');
+  c.innerHTML = '';
+
+  // Guión
+  const scriptSecs = [
+    {label:'Hook', text:g.hook, isHook:true},
+    (g.hook_apellido&&tipo==='numeros') ? {label:'Segundo Golpe', text:g.hook_apellido, isHook:true} : null,
+    {label:'Desarrollo', text:g.cuerpo},
+    g.cta ? {label:'CTA', text:g.cta} : null,
+  ].filter(Boolean);
+
+  scriptSecs.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'script-section';
+    d.innerHTML = `<div class="script-section-label">${s.label}</div><div class="${s.isHook?'hook-text':'script-text'}">${esc(s.text)}</div>`;
+    c.appendChild(d);
+  });
+
+  // Producción
+  if ((g.filmacion?.length||0)+(g.edicion?.length||0) > 0) {
+    const prod = document.createElement('div');
+    prod.className = 'script-section';
+    prod.innerHTML = `<div class="script-section-label">Producción</div><div class="produccion-block"></div>`;
+    const block = prod.querySelector('.produccion-block');
+
+    if (g.filmacion?.length) {
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin-bottom:8px;';
+      title.textContent = 'Filmación';
+      block.appendChild(title);
+      g.filmacion.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'produccion-item';
+        item.innerHTML = `<span class="produccion-icon">▸</span><span>${esc(f)}</span>`;
+        block.appendChild(item);
+      });
+    }
+
+    if (g.edicion?.length) {
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin:12px 0 8px;';
+      title.textContent = 'Edición';
+      block.appendChild(title);
+      g.edicion.forEach(e => {
+        const item = document.createElement('div');
+        item.className = 'produccion-item';
+        item.innerHTML = `<span class="produccion-icon">▸</span><span>${esc(e)}</span>`;
+        block.appendChild(item);
+      });
+    }
+    c.appendChild(prod);
+  }
+
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copyScript() {
+  if (!lastGuionData) return;
+  const g = lastGuionData.guion;
+  let t = '';
+  if (g.hook) t += `HOOK:\n${g.hook}\n\n`;
+  if (g.hook_apellido) t += `SEGUNDO GOLPE:\n${g.hook_apellido}\n\n`;
+  if (g.cuerpo) t += `DESARROLLO:\n${g.cuerpo}\n\n`;
+  if (g.cta) t += `CTA:\n${g.cta}\n\n`;
+  if (g.filmacion?.length) t += `FILMACIÓN:\n${g.filmacion.map(f=>`• ${f}`).join('\n')}\n\n`;
+  if (g.edicion?.length) t += `EDICIÓN:\n${g.edicion.map(e=>`• ${e}`).join('\n')}`;
+  navigator.clipboard.writeText(t.trim()).then(() => {
+    const b = document.querySelector('.btn-copy');
+    b.textContent = '✓ Copiado';
+    setTimeout(() => b.textContent = 'Copiar todo', 2000);
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 2500);
+}
+</script>
+</body>
+</html>
