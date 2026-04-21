@@ -1,50 +1,26 @@
-const https = require('https');
-
-exports.handler = function(event, context, callback) {
+exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
-    return callback(null, { statusCode: 405, body: 'Method Not Allowed' });
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const body = event.body || '';
-  const bodyBuffer = Buffer.from(body, 'utf8');
-  console.log('KEY EXISTS:', !!process.env.ANTHROPIC_API_KEY);
-console.log('KEY START:', (process.env.ANTHROPIC_API_KEY || '').substring(0, 10));
-
-  const options = {
-    hostname: 'api.anthropic.com',
-    path: '/v1/messages',
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'Content-Length': bodyBuffer.length
-    }
+      'anthropic-version': '2023-06-01'
+    },
+    body: event.body
+  });
+
+  const data = await response.json();
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
   };
-
-  const req = https.request(options, function(res) {
-    let data = '';
-    res.on('data', function(chunk) { data += chunk; });
-    res.on('end', function() {
-      callback(null, {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: data
-      });
-    });
-  });
-
-  req.on('error', function(err) {
-    callback(null, {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: err.message })
-    });
-  });
-
-  req.write(bodyBuffer);
-  req.end();
 };
