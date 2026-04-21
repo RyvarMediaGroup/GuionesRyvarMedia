@@ -5,7 +5,8 @@ exports.handler = async function(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const body = event.body;
+  const body = event.body || '';
+  const bodyBuffer = Buffer.from(body, 'utf8');
 
   return new Promise((resolve) => {
     const options = {
@@ -16,7 +17,7 @@ exports.handler = async function(event) {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(body)
+        'Content-Length': bodyBuffer.length
       }
     };
 
@@ -35,4 +36,15 @@ exports.handler = async function(event) {
       });
     });
 
-    req.o
+    req.on('error', (err) => {
+      resolve({
+        statusCode: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: err.message })
+      });
+    });
+
+    req.write(bodyBuffer);
+    req.end();
+  });
+};
