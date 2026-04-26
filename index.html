@@ -1001,8 +1001,7 @@ async function approveGuion(idx) {
   const pending = store.get('ryvar_pending') || [];
   const item = pending[idx];
   if (!item) return;
-  pending.splice(idx, 1);
-  store.set('ryvar_pending', pending);
+
   try {
     const res = await fetch(WORKER + '/approved', {
       method: 'POST',
@@ -1010,22 +1009,33 @@ async function approveGuion(idx) {
       body: JSON.stringify({...item, approvedAt: Date.now()})
     });
     const data = await res.json();
+
+    // Si el Worker devuelve error, lanzar excepción para activar fallback
+    if (!res.ok || data.error) throw new Error(data.error || `Worker error ${res.status}`);
+
+    // Confirmar guardado — ahora sí eliminar de la cola
+    pending.splice(idx, 1);
+    store.set('ryvar_pending', pending);
+    syncPendingToKV('remove', item.generatedAt).catch(()=>{});
+
     // Actualizar contador con total real de D1
     const el = document.getElementById('approved-count');
     if (el && data.total !== undefined) el.textContent = `${data.total} guión${data.total!==1?'es':''} aprobado${data.total!==1?'s':''} en base de datos`;
+
     // Auto-generar perfil de estilo cada 5 aprobados
-    if (data.total > 0 && data.total % 5 === 0) {
-      generateStyleProfile(item.sector, item.tipo);
-    }
+    if (data.total > 0 && data.total % 5 === 0) generateStyleProfile(item.sector, item.tipo);
+
+    showToast('Guión aprobado ✓');
   } catch(e) {
-    // Fallback local si D1 falla
+    // Fallback a localStorage si D1 falla — el item se queda en la cola también
     const approved = store.get('ryvar_approved') || [];
     approved.push({...item, approvedAt: Date.now()});
     store.set('ryvar_approved', approved);
-    console.warn('D1 sync failed, saved locally', e);
+    console.error('D1 approve failed:', e.message);
+    showToast('⚠ Guardado localmente (error en DB: ' + e.message.substring(0, 60) + ')');
   }
+
   await sendToSheet({...item, status:'approved', approvedAt: new Date().toISOString()});
-  showToast('Guión aprobado ✓');
   loadQueueList();
   updateExampleCount();
 }
