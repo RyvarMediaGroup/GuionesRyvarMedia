@@ -537,7 +537,25 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       <div class="divider"></div>
       <h3>Base de aprendizaje</h3>
       <div id="approved-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
-      <button class="btn btn-red" style="width:100%;font-size:12px" onclick="clearApproved()">Limpiar guiones aprobados</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="approved-sector-filter" style="flex:1" onchange="loadApprovedList()">
+          <option value="">Todos los sectores</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadApprovedList()">↻ Cargar</button>
+      </div>
+      <div id="approved-list" style="font-size:12px;color:var(--muted);margin-bottom:12px">Presiona ↻ Cargar para ver los guiones aprobados.</div>
+      <button class="btn btn-red" style="width:100%;font-size:12px" onclick="clearApproved()">Limpiar todos los guiones aprobados</button>
+
+      <div class="divider"></div>
+      <h3>Estilos a evitar</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Revisa y elimina entradas marcadas por error.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="avoid-sector-filter" style="flex:1" onchange="loadAvoidStylesList()">
+          <option value="">Todos los sectores</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadAvoidStylesList()">↻ Cargar</button>
+      </div>
+      <div id="avoid-styles-list" style="font-size:12px;color:var(--muted)">Presiona ↻ Cargar para ver los estilos marcados.</div>
     </div>
 
   </div>
@@ -713,6 +731,7 @@ function doLogout() {
   versionSelected = false;
   versionDiscarded = false;
   sessionHistory = [];
+  sessionHooksTracker = { sector: '', tipo: '', modo: '', hooks: [] };
   renderHistory();
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('app').classList.remove('visible');
@@ -789,6 +808,7 @@ function switchTab(tab, btn) {
   if (tab === 'cola')   loadQueueList();
   if (tab === 'prompt') loadPromptStudio();
   if (tab === 'reels')  { loadReelSectorSel(); loadReelsList(); }
+  if (tab === 'config') { loadAvoidSectorFilter(); loadApprovedSectorFilter(); }
 }
 
 // ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
@@ -1088,11 +1108,124 @@ async function avoidGuion(idx) {
   loadQueueList();
 }
 
+function loadAvoidSectorFilter() {
+  const sel = document.getElementById('avoid-sector-filter');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todos los sectores</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+async function loadAvoidStylesList() {
+  const el = document.getElementById('avoid-styles-list');
+  if (!el) return;
+  const sector = document.getElementById('avoid-sector-filter')?.value || '';
+  el.innerHTML = '<span style="color:var(--muted)">Cargando...</span>';
+  try {
+    const params = sector ? `?sector=${encodeURIComponent(sector)}` : '';
+    const res = await fetch(`${WORKER}/avoid${params}`);
+    const { styles = [] } = await res.json();
+    if (!styles.length) {
+      el.innerHTML = '<div style="color:var(--muted)">No hay estilos marcados para evitar.</div>';
+      return;
+    }
+    el.innerHTML = styles.map(s => `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'}</div>
+          <div style="color:var(--text);font-size:13px">${esc(s.hook||'—')}</div>
+          ${s.cuerpo ? `<div style="color:var(--muted);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.cuerpo.substring(0,90))}...</div>` : ''}
+        </div>
+        <button class="btn btn-red btn-sm" onclick="deleteAvoidStyle(${s.id})" title="Eliminar" style="flex-shrink:0;padding:6px 10px">🗑</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:12px">Error al cargar. Verifica que el Worker esté actualizado.</div>';
+  }
+}
+
+async function deleteAvoidStyle(id) {
+  try {
+    await fetch(WORKER + '/avoid', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id })
+    });
+    const avoid = (store.get('ryvar_avoid_styles') || []).filter(a => a.dbId !== id);
+    store.set('ryvar_avoid_styles', avoid);
+    showToast('Estilo eliminado');
+    loadAvoidStylesList();
+  } catch(e) { showToast('Error al eliminar'); }
+}
+
+// ── GUIONES APROBADOS (gestión) ───────────────────────────────────────
+function loadApprovedSectorFilter() {
+  const sel = document.getElementById('approved-sector-filter');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todos los sectores</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+async function loadApprovedList() {
+  const el = document.getElementById('approved-list');
+  if (!el) return;
+  const sector = document.getElementById('approved-sector-filter')?.value || '';
+  el.innerHTML = '<span style="color:var(--muted)">Cargando...</span>';
+  try {
+    const params = sector ? `?sector=${encodeURIComponent(sector)}` : '';
+    const res = await fetch(`${WORKER}/approved${params}`);
+    const { scripts = [], total = 0 } = await res.json();
+    const countEl = document.getElementById('approved-count');
+    if (countEl) countEl.textContent = `${total} guión${total!==1?'es':''} aprobado${total!==1?'s':''} en base de datos`;
+    if (!scripts.length) {
+      el.innerHTML = '<div style="color:var(--muted)">No hay guiones aprobados aún.</div>';
+      return;
+    }
+    el.innerHTML = scripts.map(s => `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'} · ${esc(s.cliente||'—')}</div>
+          <div style="color:var(--text);font-size:13px">${esc(s.hook||'—')}</div>
+          ${s.hook_apellido ? `<div style="color:var(--accent-l);font-size:12px;margin-top:2px">${esc(s.hook_apellido)}</div>` : ''}
+          ${s.cuerpo ? `<div style="color:var(--muted);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.cuerpo.substring(0,90))}...</div>` : ''}
+        </div>
+        <button class="btn btn-red btn-sm" onclick="deleteApprovedScript(${s.id})" title="Eliminar" style="flex-shrink:0;padding:6px 10px">🗑</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:12px">Error al cargar. Verifica que el Worker esté actualizado.</div>';
+  }
+}
+async function deleteApprovedScript(id) {
+  if (!confirm('¿Eliminar este guión de la base de aprendizaje?')) return;
+  try {
+    await fetch(WORKER + '/approved', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id })
+    });
+    showToast('Guión eliminado');
+    loadApprovedList();
+  } catch(e) { showToast('Error al eliminar'); }
+}
+
 // ─── GENERADOR ────────────────────────────────────────────────────────────────
 function updateCount(el, id) { document.getElementById(id).textContent = el.value.length; }
 
 let lastGuionData = null;
 let versionSelected = false;
+// Rastreador de hooks generados en la sesión actual (se resetea al cambiar sector/tipo/modo)
+let sessionHooksTracker = { sector: '', tipo: '', modo: '', hooks: [] };
 let versionDiscarded = false;
 let sessionHistory = [];
 
@@ -1208,11 +1341,23 @@ async function generarGuion() {
   const sectorRulesAll = store.get('ryvar_sector_rules') || {};
   const sectorRules    = sectorRulesAll[sector] || '';
 
+  // Reiniciar rastreador de sesión si cambió el contexto (sector, tipo o modo)
+  if (sessionHooksTracker.sector !== sector ||
+      sessionHooksTracker.tipo   !== tipo   ||
+      sessionHooksTracker.modo   !== modo) {
+    sessionHooksTracker = { sector, tipo, modo, hooks: [] };
+  }
+
   document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
   // Obtener ejemplos de D1 mientras se muestra el loader
   const ejemplos = await getExamples(sector, tipo);
+
+  // Hooks ya generados en esta sesión (mismo sector+tipo+modo) para evitar repetición
+  const sessionHooksCtx = sessionHooksTracker.hooks.length
+    ? `HOOKS YA GENERADOS EN ESTA SESIÓN (no repitas estos patrones ni variaciones similares):\n${sessionHooksTracker.hooks.map(h => `• ${h}`).join('\n')}`
+    : '';
 
   // Construir prompt: reglas primero, ejemplos después (para que las reglas tengan más peso)
   const modoConfig = {
@@ -1241,13 +1386,14 @@ async function generarGuion() {
   };
   const mc = modoConfig[modo];
 
-  // Sistema: identidad → sector → reglas del sector → reglas de hook/estructura → ejemplos (al final)
+  // Sistema: identidad → sector → reglas del sector → reglas de hook/estructura → ejemplos → hooks ya generados
   const systemPrompt = [
     pr.identidad,
     `CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}`,
     sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : '',
     mc.rules || '',
     ejemplos || '',
+    sessionHooksCtx || '',
     `RESPONDE SOLO con este JSON sin markdown ni texto extra:\n${mc.jsonFormat}`,
   ].filter(Boolean).join('\n\n');
 
@@ -1286,6 +1432,14 @@ Solo el JSON.`}]
     lastGuionData = {guion:g, modo, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
     versionSelected = false;
     versionDiscarded = false;
+
+    // Registrar hook generado para evitar repetición en la misma sesión
+    if (g.hook) {
+      const hookEntry = g.hook + (g.hook_apellido ? ' / ' + g.hook_apellido : '');
+      if (!sessionHooksTracker.hooks.includes(hookEntry)) {
+        sessionHooksTracker.hooks.push(hookEntry);
+      }
+    }
 
     // Reset botones de versión
     const btnSel = document.getElementById('btn-select-version');
@@ -1495,18 +1649,32 @@ const WORKER = 'https://ryvar-api.ryan-f70.workers.dev';
 
 async function loadRemoteConfig() {
   try {
-    const res = await fetch(WORKER + '/config');
-    const data = await res.json();
+    // Cargar config KV + prompt rules D1 en paralelo
+    const [configRes, rulesRes] = await Promise.all([
+      fetch(WORKER + '/config'),
+      fetch(WORKER + '/prompt-rules'),
+    ]);
+    const data  = await configRes.json();
+    const rules = await rulesRes.json();
+
     if (data.sectors    && data.sectors.length)    store.set('ryvar_sectors',       data.sectors);
     if (data.duraciones && data.duraciones.length) store.set('ryvar_duraciones',    data.duraciones);
     if (data.sectorCtx)                            store.set('ryvar_sector_ctx_all', data.sectorCtx);
-    if (data.promptRules && Object.keys(data.promptRules).length)
-                                                   store.set('ryvar_prompt_rules',  data.promptRules);
     if (data.sectorRules && Object.keys(data.sectorRules).length)
                                                    store.set('ryvar_sector_rules',  data.sectorRules);
     if (data.pending)                              store.set('ryvar_pending',       data.pending);
 
-    // Si KV está vacío (primer uso), subir los defaults para que todos los dispositivos los tengan
+    // Prompt rules desde D1 (fuente de verdad para todos los dispositivos)
+    if (rules && Object.keys(rules).length) {
+      // sectorRules viene serializado como JSON string en D1
+      const { sectorRules: sr, ...promptRules } = rules;
+      if (Object.keys(promptRules).length) store.set('ryvar_prompt_rules', promptRules);
+      if (sr) {
+        try { store.set('ryvar_sector_rules', typeof sr === 'string' ? JSON.parse(sr) : sr); } catch(e) {}
+      }
+    }
+
+    // Si KV está vacío (primer uso), subir los defaults
     if (!data.sectors || !data.sectors.length) {
       fetch(WORKER + '/config', {
         method: 'POST',
@@ -1583,16 +1751,17 @@ async function savePromptRules() {
   store.set('ryvar_prompt_rules', rules);
   const st = document.getElementById('ps-status');
   try {
-    await fetch(WORKER + '/config', {
+    // Guardar en D1 (fuente de verdad, disponible para todos los dispositivos)
+    await fetch(WORKER + '/prompt-rules', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ promptRules: rules })
+      body: JSON.stringify(rules)
     });
     st.style.color = 'var(--green)';
-    st.textContent = '✓ Guardado y sincronizado en todos los dispositivos';
+    st.textContent = '✓ Guardado en base de datos — disponible para todos los dispositivos';
   } catch(e) {
     st.style.color = 'var(--muted)';
-    st.textContent = 'Guardado localmente (sin conexión)';
+    st.textContent = 'Guardado localmente (sin conexión a D1)';
   }
   setTimeout(() => st.textContent = '', 4000);
 }
@@ -1626,16 +1795,16 @@ async function saveSectorRule() {
   store.set('ryvar_sector_rules', rules);
   const st = document.getElementById('ps-rule-status');
   try {
-    await fetch(WORKER + '/config', {
+    await fetch(WORKER + '/prompt-rules', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ sectorRules: rules })
     });
     st.style.color = 'var(--green)';
-    st.textContent = '✓ Regla guardada y sincronizada';
+    st.textContent = '✓ Regla guardada en base de datos';
   } catch(e) {
     st.style.color = 'var(--muted)';
-    st.textContent = 'Guardado localmente (sin conexión)';
+    st.textContent = 'Guardado localmente (sin conexión a D1)';
   }
   setTimeout(() => st.textContent = '', 3500);
 }
@@ -1692,13 +1861,28 @@ async function loadReelsList() {
     if (!reels.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No hay reels de referencia guardados aún.</div>'; return; }
     el.innerHTML = reels.map(r => {
       const sLbl = getSectors().find(s=>s.value===r.sector)?.label || r.sector;
-      return `<div class="queue-item" style="margin-bottom:8px;cursor:default">
-        <div class="queue-item-meta">${esc(sLbl)}${r.url ? ` · <a href="${esc(r.url)}" target="_blank" style="color:var(--accent-l)">Ver reel ↗</a>` : ''}</div>
-        <div class="queue-item-snippet">${esc((r.transcript||'').substring(0,140))}${r.transcript&&r.transcript.length>140?'...':''}</div>
-        ${r.notes ? `<div class="queue-item-snippet" style="color:var(--accent-l);margin-top:4px">💡 ${esc(r.notes)}</div>` : ''}
+      return `<div class="queue-item" style="margin-bottom:8px;cursor:default;display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="queue-item-meta">${esc(sLbl)}${r.url ? ` · <a href="${esc(r.url)}" target="_blank" style="color:var(--accent-l)">Ver reel ↗</a>` : ''}</div>
+          <div class="queue-item-snippet">${esc((r.transcript||'').substring(0,140))}${r.transcript&&r.transcript.length>140?'...':''}</div>
+          ${r.notes ? `<div class="queue-item-snippet" style="color:var(--accent-l);margin-top:4px">💡 ${esc(r.notes)}</div>` : ''}
+        </div>
+        <button class="btn btn-red btn-sm" onclick="deleteReel(${r.id})" title="Eliminar" style="flex-shrink:0;padding:6px 10px">🗑</button>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">Error al cargar reels. Verifica que el Worker esté actualizado.</div>`; }
+}
+
+async function deleteReel(id) {
+  try {
+    await fetch(WORKER + '/reference-reel', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id })
+    });
+    showToast('Reel eliminado');
+    loadReelsList();
+  } catch(e) { showToast('Error al eliminar reel'); }
 }
 
 // ── STYLE PROFILE (auto-generado cada 5 aprobados) ────────────────────
