@@ -86,10 +86,10 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
 #session-timer.warn{color:#F59E0B;border-color:rgba(245,158,11,.3)}
 
 /* ── MAIN GRID ── */
-#main-content{display:grid;grid-template-columns:360px 1fr;flex:1;overflow:hidden;padding:16px;gap:16px;padding-bottom:calc(var(--history-h)+16px);transition:padding-bottom .3s}
+#main-content{display:grid;grid-template-columns:360px 1fr;flex:1;overflow:hidden;padding:16px;gap:16px;padding-bottom:calc(var(--history-h) + 44px);transition:padding-bottom .3s}
 
 /* ── LEFT PANEL ── */
-#left-panel{overflow-y:auto;padding:22px;padding-bottom:calc(var(--history-h) + 32px)}
+#left-panel{overflow-y:auto;padding:22px;padding-bottom:calc(var(--history-h) + 60px)}
 .panel-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:18px}
 .type-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .2s}
@@ -132,7 +132,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
 #toast{position:fixed;bottom:calc(var(--history-h)+16px);left:50%;transform:translateX(-50%);background:#1a1a2a;border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:11px 22px;border-radius:var(--r-sm);display:none;z-index:400;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 
 /* ── HISTORY BAR ── */
-#history-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:50;transition:height .3s ease}#history-bar.expanded{height:var(--history-h)}#history-bar.collapsed{height:28px}#history-bar .history-inner{display:flex;align-items:center;padding:0 16px;gap:14px;height:var(--history-h)}#history-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:10px;font-weight:700;display:flex;align-items:center;gap:6px;padding:0;font-family:var(--font);letter-spacing:.4px;white-space:nowrap}#history-toggle:hover{color:var(--text)}#history-bar.collapsed .history-inner{display:none}#history-bar .collapse-tab{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:28px;cursor:pointer}#history-bar .collapse-tab:hover{background:rgba(255,255,255,.03)}
+#history-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:50;transition:height .3s ease}#history-bar.expanded{height:calc(var(--history-h) + 28px)}#history-bar.collapsed{height:28px}#history-bar .history-inner{display:flex;align-items:center;padding:0 16px;gap:14px;height:var(--history-h)}#history-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:10px;font-weight:700;display:flex;align-items:center;gap:6px;padding:0;font-family:var(--font);letter-spacing:.4px;white-space:nowrap}#history-toggle:hover{color:var(--text)}#history-bar.collapsed .history-inner{display:none}#history-bar .collapse-tab{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:28px;cursor:pointer}#history-bar .collapse-tab:hover{background:rgba(255,255,255,.03)}
 .history-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);white-space:nowrap;flex-shrink:0}
 #history-scroll{display:flex;gap:10px;overflow-x:auto;flex:1;padding:4px 0;scroll-behavior:smooth}
 #history-scroll::-webkit-scrollbar{height:3px}
@@ -148,8 +148,8 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
 #admin-btn{display:none}
 
 #admin-btn.show{display:inline-flex}
-#pending-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 3px}
-#pending-badge.show{display:flex}
+#pending-badge{position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 3px;pointer-events:none;border:2px solid #0a0a0a}
+#pending-badge.show{display:flex}#admin-btn:not(.show) #pending-badge{display:none!important}
 
 /* ── ADMIN AUTH MODAL ── */
 #admin-auth-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center}
@@ -254,7 +254,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <div id="session-timer">⏱ 3:00:00</div>
-      <button id="admin-btn" class="btn btn-ghost btn-sm" onclick="openAdminAuth()" title="Panel Admin" >⚙ Admin<div id="pending-badge"></div></button>
+      <button id="admin-btn" class="btn btn-ghost btn-sm" onclick="openAdminAuth()" title="Panel Admin"  style="position:relative">⚙ Admin<span id="pending-badge"></span></button>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
     </div>
   </div>
@@ -376,6 +376,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <button class="admin-tab active" onclick="switchTab('cola',this)">Cola</button>
     <button class="admin-tab" onclick="switchTab('sectores',this)">Sectores</button>
     <button class="admin-tab" onclick="switchTab('duraciones',this)">Duraciones</button>
+    <button class="admin-tab" onclick="switchTab('prompt',this)">Prompt Studio</button>
     <button class="admin-tab" onclick="switchTab('config',this)">Config</button>
   </div>
   <div class="admin-body">
@@ -405,6 +406,34 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
         <input type="text" id="new-duracion" placeholder="Ej: 45-60 seg" onkeydown="if(event.key==='Enter')addDuracion()">
         <button class="btn btn-primary btn-sm" onclick="addDuracion()">+ Agregar</button>
       </div>
+    </div>
+
+    <!-- PROMPT STUDIO -->
+    <div class="admin-section" id="tab-prompt">
+      <h3>Prompt Studio</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Define cómo la IA genera cada guión. Los cambios se sincronizan en todos los dispositivos al guardar.</p>
+      <div class="field">
+        <label>Identidad del generador</label>
+        <textarea id="ps-identidad" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label>Reglas Hook NÚMEROS (primer golpe + segundo golpe)</label>
+        <textarea id="ps-hook-numeros" rows="4"></textarea>
+      </div>
+      <div class="field">
+        <label>Reglas Hook MARCA</label>
+        <textarea id="ps-hook-marca" rows="4"></textarea>
+      </div>
+      <div class="field">
+        <label>Estructura temporal</label>
+        <textarea id="ps-estructura" rows="2"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="savePromptRules()">💾 Guardar y sincronizar</button>
+      <div id="ps-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
+      <div class="divider"></div>
+      <h3>Perfiles de estilo aprendidos</h3>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Se generan automáticamente cada 5 guiones aprobados por sector.</p>
+      <div id="ps-profiles" style="font-size:12px;color:var(--muted)">Se cargan al aprobar guiones.</div>
     </div>
 
     <!-- CONFIG -->
@@ -500,17 +529,17 @@ const DURACION_DEFAULTS = [
 ];
 
 const SECTOR_CONTEXT = {
-  consultoria_financiera:'Audiencia profesional, busca credibilidad y resultados tangibles. El dolor es el miedo a perder dinero o estancarse.',
-  venta_gomas:'Audiencia práctica, decide por precio/calidad/seguridad. El dolor es el riesgo en carretera.',
-  retail_moda:'Audiencia aspiracional, compra identidad no producto. El dolor es no verse como quiere.',
-  agencia_marketing:'Audiencia empresarial escéptica. Necesita prueba social y números reales.',
-  influencer_comida:'Audiencia curiosa y hambrienta. Lenguaje coloquial, sensorial.',
-  influencer_lifestyle:'Audiencia aspiracional, busca inspiración. Lenguaje cercano y auténtico.',
-  paneles_solares:'Orientada al ahorro y sostenibilidad. El dolor es la factura eléctrica.',
-  climatizacion:'Problema concreto: calor o frío. Vende confort y eficiencia.',
-  decoracion_eventos:'Audiencia emocional. El dolor es el miedo a que el evento no quede perfecto.',
-  inmobiliario:'Decisión de alto impacto. Necesita confianza y claridad.',
-  otro:'Adaptar al contexto del cliente.',
+  consultoria_financiera:'Audiencia empresarial dominicana, busca ROI tangible y cumplimiento con la DGII. Miedo real: perder competitividad o enfrentar sanciones fiscales. Lenguaje directo, números concretos, credibilidad ante todo.',
+  venta_gomas:'Audiencia práctica que decide por precio, garantía y disponibilidad inmediata. El dolor real es el riesgo en las carreteras dominicanas y el costo de un accidente familiar. Mensaje de seguridad primero.',
+  retail_moda:'Audiencia aspiracional donde la moda es señal de status social fuerte en RD. El dolor es no verse al nivel que quiere proyectar. Lenguaje de exclusividad, tendencia y confianza en sí mismo.',
+  agencia_marketing:'Audiencia empresarial con muchas malas experiencias previas con agencias. Necesita prueba social local, casos reales dominicanos y números verificables. Cero promesas vacías.',
+  influencer_comida:'Audiencia curiosa donde la comida es cultura y orgullo dominicano. Lenguaje sensorial, coloquial y emocional. Conectar con sabores, momentos familiares y tradición.',
+  influencer_lifestyle:'Audiencia joven dominicana aspiracional que busca inspiración y validación. Lenguaje cercano y auténtico. El lujo cotidiano accesible resuena más que el lujo inalcanzable.',
+  paneles_solares:'Audiencia con dolor mensual por facturas de EDE cada vez más altas. Argumento financiero primero, ambiental segundo. El ROI en 3-5 años es el gancho principal.',
+  climatizacion:'Problema concreto del calor caribeño. Vende confort, salud y productividad. El ahorro en electricidad vs costo del equipo es el puente de decisión clave.',
+  decoracion_eventos:'Audiencia emocional donde la presión social en eventos es muy alta en RD. El dolor es el miedo a que no quede perfecto y a la crítica de familia y amigos.',
+  inmobiliario:'Decisión de alto impacto económico y emocional. El sueño de la casa propia en RD tiene carga emocional profunda. Necesita confianza, claridad legal y visión de futuro.',
+  otro:'Adaptar al contexto específico del cliente y su mercado objetivo en República Dominicana.',
 };
 
 // ─── STORAGE ─────────────────────────────────────────────────────────────────
@@ -519,8 +548,8 @@ const store = {
   set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
 };
 const getAdminPw = () => store.get('ryvar_admin_pw') || 'ryvar2024';
-const getSectors   = () => store.get('ryvar_sectors')   || SECTOR_DEFAULTS;
-const getDuraciones= () => store.get('ryvar_duraciones') || DURACION_DEFAULTS;
+const getSectors    = () => { const s = store.get('ryvar_sectors');    return (s && s.length) ? s : SECTOR_DEFAULTS;    };
+const getDuraciones = () => { const d = store.get('ryvar_duraciones'); return (d && d.length) ? d : DURACION_DEFAULTS; };
 
 // ─── SELECTS DINÁMICOS ────────────────────────────────────────────────────────
 function loadSectorSelect() {
@@ -575,10 +604,7 @@ function doLogin() {
   }
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
-  loadSectorSelect();
-  loadDuracionSelect();
-  updateExampleCount();
-  updatePendingBadge();
+  loadRemoteConfig();
   const sessionEnd = now + SESSION_MS;
   startSessionTimer(sessionEnd);
 }
@@ -657,7 +683,8 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'cola') loadQueueList();
+  if (tab === 'cola')   loadQueueList();
+  if (tab === 'prompt') loadPromptStudio();
 }
 
 // ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
@@ -691,17 +718,43 @@ function renderSectorsList() {
       <button class="btn btn-icon" onclick="deleteSector(${i})" style="font-size:12px">✕</button>
     </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">Sin sectores</div>';
 }
-function addSector() {
+async function addSector() {
   const inp = document.getElementById('new-sector');
   const val = inp.value.trim();
   if (!val) return;
   const sectors = getSectors();
-  sectors.push({value: 'custom_' + Date.now(), label: val});
+  const sKey = 'custom_' + Date.now();
+  sectors.push({value: sKey, label: val});
   store.set('ryvar_sectors', sectors);
   inp.value = '';
   renderSectorsList();
   loadSectorSelect();
-  showToast('Sector agregado');
+  showToast('Generando contexto del sector...');
+  // Generar contexto automático via IA
+  try {
+    const res = await fetch('https://ryvar-api.ryan-f70.workers.dev', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        messages: [{role: 'user', content: `Para el sector "${val}", escribe UNA sola frase de contexto de marketing siguiendo exactamente este formato: "[Descripción de audiencia]. El dolor es [problema principal]." Solo la frase, sin comillas ni explicación.`}]
+      })
+    });
+    const data = await res.json();
+    const ctx = data.content?.find(b=>b.type==='text')?.text?.trim();
+    if (ctx) {
+      const ctxAll = store.get('ryvar_sector_ctx_all') || {};
+      ctxAll[sKey] = ctx;
+      store.set('ryvar_sector_ctx_all', ctxAll);
+      syncConfigToKV();
+      showToast('Sector "' + val + '" agregado con contexto IA ✓');
+    } else {
+      showToast('Sector agregado');
+    }
+  } catch(e) {
+    showToast('Sector agregado');
+  }
 }
 function deleteSector(i) {
   const sectors = getSectors();
@@ -709,6 +762,7 @@ function deleteSector(i) {
   store.set('ryvar_sectors', sectors);
   renderSectorsList();
   loadSectorSelect();
+  syncConfigToKV();
   showToast('Sector eliminado');
 }
 
@@ -732,6 +786,7 @@ function addDuracion() {
   inp.value = '';
   renderDuracionesList();
   loadDuracionSelect();
+  syncConfigToKV();
   showToast('Duración agregada');
 }
 function deleteDuracion(i) {
@@ -740,6 +795,7 @@ function deleteDuracion(i) {
   store.set('ryvar_duraciones', durs);
   renderDuracionesList();
   loadDuracionSelect();
+  syncConfigToKV();
   showToast('Duración eliminada');
 }
 
@@ -820,21 +876,41 @@ async function approveGuion(idx) {
   const pending = store.get('ryvar_pending') || [];
   const item = pending[idx];
   if (!item) return;
-  const approved = store.get('ryvar_approved') || [];
-  approved.push({...item, approvedAt: Date.now()});
-  store.set('ryvar_approved', approved);
-  pending.splice(idx,1);
+  pending.splice(idx, 1);
   store.set('ryvar_pending', pending);
+  try {
+    const res = await fetch(WORKER + '/approved', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({...item, approvedAt: Date.now()})
+    });
+    const data = await res.json();
+    // Actualizar contador con total real de D1
+    const el = document.getElementById('approved-count');
+    if (el && data.total !== undefined) el.textContent = `${data.total} guión${data.total!==1?'es':''} aprobado${data.total!==1?'s':''} en base de datos`;
+    // Auto-generar perfil de estilo cada 5 aprobados
+    if (data.total > 0 && data.total % 5 === 0) {
+      generateStyleProfile(item.sector, item.tipo);
+    }
+  } catch(e) {
+    // Fallback local si D1 falla
+    const approved = store.get('ryvar_approved') || [];
+    approved.push({...item, approvedAt: Date.now()});
+    store.set('ryvar_approved', approved);
+    console.warn('D1 sync failed, saved locally', e);
+  }
   await sendToSheet({...item, status:'approved', approvedAt: new Date().toISOString()});
   showToast('Guión aprobado ✓');
   loadQueueList();
   updateExampleCount();
-  updateApprovedCount();
 }
-function rejectGuion(idx) {
+async function rejectGuion(idx) {
   const pending = store.get('ryvar_pending') || [];
-  pending.splice(idx,1);
+  const item = pending[idx];
+  const generatedAt = item?.generatedAt;
+  pending.splice(idx, 1);
   store.set('ryvar_pending', pending);
+  if (generatedAt) syncPendingToKV('remove', generatedAt).catch(()=>{});
   showToast('Guión rechazado');
   loadQueueList();
 }
@@ -883,13 +959,27 @@ function updateCount(el, id) { document.getElementById(id).textContent = el.valu
 let lastGuionData = null;
 let sessionHistory = [];
 
-function getExamples(sector, tipo) {
-  const approved = store.get('ryvar_approved') || [];
-  return approved
-    .filter(a => a.sector===sector && a.tipo===tipo)
-    .slice(-5)
-    .map(a => `EJEMPLO APROBADO:\nHook: ${a.guion.hook}\n${a.guion.hook_apellido?'Segundo golpe: '+a.guion.hook_apellido+'\n':''}Desarrollo: ${(a.guion.cuerpo||'').substring(0,200)}\nCTA: ${a.guion.cta||''}`)
-    .join('\n\n---\n\n');
+async function getExamples(sector, tipo) {
+  try {
+    const res = await fetch(`${WORKER}/examples?sector=${encodeURIComponent(sector)}&tipo=${encodeURIComponent(tipo)}`);
+    const { examples=[], profile=null } = await res.json();
+    let out = '';
+    if (profile) out += `PERFIL DE ESTILO APRENDIDO (patrones de tus guiones aprobados):\n${profile}\n\n`;
+    if (examples.length) {
+      out += examples.map(e =>
+        `EJEMPLO APROBADO:\nHook: ${e.hook}\n${e.hook_apellido?'Segundo golpe: '+e.hook_apellido+'\n':''}Desarrollo: ${(e.cuerpo||'').substring(0,220)}\nCTA: ${e.cta||''}`
+      ).join('\n\n---\n\n');
+    }
+    return out;
+  } catch(e) {
+    // Fallback a localStorage si D1 no responde
+    const approved = store.get('ryvar_approved') || [];
+    return approved
+      .filter(a => a.sector===sector && a.tipo===tipo)
+      .slice(-5)
+      .map(a => `EJEMPLO APROBADO:\nHook: ${a.guion.hook}\n${a.guion.hook_apellido?'Segundo golpe: '+a.guion.hook_apellido+'\n':''}Desarrollo: ${(a.guion.cuerpo||'').substring(0,220)}\nCTA: ${a.guion.cta||''}`)
+      .join('\n\n---\n\n');
+  }
 }
 function updateExampleCount() {
   const total = (store.get('ryvar_approved') || []).length;
@@ -918,40 +1008,30 @@ async function generarGuion() {
   const sectorLabel = sectorObj.label;
   const durLabel    = durObj.label;
   const platLabel   = {instagram:'Instagram Reels',tiktok:'TikTok',facebook:'Facebook Reels',youtube:'YouTube Shorts'}[plataforma];
-  const sectorCtx   = SECTOR_CONTEXT[sector] || 'Adaptar al contexto del cliente.';
-  const elementos   = [incHook&&'Hook poderoso 0-3 seg',incCta&&'CTA claro',incStat&&'Dato/estadística',incReeng&&'Reenganche 8-12 seg'].filter(Boolean).join(', ') || 'estándar';
-  const ejemplos    = getExamples(sector, tipo);
+  const ctxAll = store.get('ryvar_sector_ctx_all') || {};
+  const sectorCtx = SECTOR_CONTEXT[sector] || ctxAll[sector] || 'Sector: '+sectorLabel+'. Adaptar tono y ejemplos al contexto específico del sector de '+sectorLabel+' en República Dominicana.';
+  const elementos = [incHook&&'Hook poderoso 0-3 seg',incCta&&'CTA claro',incStat&&'Dato/estadística',incReeng&&'Reenganche 8-12 seg'].filter(Boolean).join(', ') || 'estándar';
 
-  const hooksPrompt = tipo==='numeros'
-    ? `HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.`
-    : `HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.`;
+  // Leer reglas de prompt desde KV/localStorage (editables en Prompt Studio)
+  const pr = getPromptRules();
+  const hooksPrompt = tipo==='numeros' ? pr.hookNumeros : pr.hookMarca;
 
   document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
-  const apiKey = store.get('ryvar_api_key');
-  if (!apiKey) {
-    document.getElementById('loading-overlay').classList.remove('visible');
-    document.getElementById('btn-gen').disabled = false;
-    showToast('⚠ Configura tu API Key en Admin → Config');
-    return;
-  }
+  // Obtener ejemplos de D1 mientras se muestra el loader
+  const ejemplos = await getExamples(sector, tipo);
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(WORKER, {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1200,
-        system: `Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.
+        max_tokens: 2000,
+        system: `${pr.identidad}
 ${hooksPrompt}
-ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.
+${pr.estructura}
 CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
 ${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — calibra estilo, no copies):\n${ejemplos}` : ''}
 RESPONDE SOLO con este JSON sin markdown ni texto extra:
@@ -975,6 +1055,7 @@ RESPONDE SOLO con este JSON sin markdown ni texto extra:
     pending.push(lastGuionData);
     store.set('ryvar_pending', pending);
     updatePendingBadge();
+    syncPendingToKV('add', lastGuionData).catch(()=>{});
 
     renderGuion(g, cliente, platLabel, sectorLabel, tipo, durLabel);
     addToHistory(lastGuionData);
@@ -1140,10 +1221,7 @@ function doFirstAccess() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   document.getElementById('admin-btn').classList.add('show');
-  loadSectorSelect();
-  loadDuracionSelect();
-  updateExampleCount();
-  updatePendingBadge();
+  loadRemoteConfig();
   const sessionEnd = Date.now() + SESSION_MS;
   startSessionTimer(sessionEnd);
   // Abrir panel admin directamente
@@ -1158,6 +1236,141 @@ function toggleHistory() {
   bar.classList.toggle('collapsed', expanded);
   icon.textContent = expanded ? '▶ expandir' : '▼ colapsar';
 }
+
+// ── CLOUDFLARE KV + D1 SYNC ───────────────────────────────────────────
+const WORKER = 'https://ryvar-api.ryan-f70.workers.dev';
+
+async function loadRemoteConfig() {
+  try {
+    const res = await fetch(WORKER + '/config');
+    const data = await res.json();
+    if (data.sectors    && data.sectors.length)    store.set('ryvar_sectors',       data.sectors);
+    if (data.duraciones && data.duraciones.length) store.set('ryvar_duraciones',    data.duraciones);
+    if (data.sectorCtx)                            store.set('ryvar_sector_ctx_all', data.sectorCtx);
+    if (data.promptRules && Object.keys(data.promptRules).length)
+                                                   store.set('ryvar_prompt_rules',  data.promptRules);
+    if (data.pending)                              store.set('ryvar_pending',       data.pending);
+
+    // Si KV está vacío (primer uso), subir los defaults para que todos los dispositivos los tengan
+    if (!data.sectors || !data.sectors.length) {
+      fetch(WORKER + '/config', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ sectors: SECTOR_DEFAULTS, duraciones: DURACION_DEFAULTS })
+      }).catch(()=>{});
+    }
+
+    loadSectorSelect();
+    loadDuracionSelect();
+    updateExampleCount();
+    updatePendingBadge();
+  } catch(e) { console.warn('Config remota no disponible, usando local'); }
+}
+
+async function syncConfigToKV() {
+  try {
+    await fetch(WORKER + '/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sectors:     getSectors(),
+        duraciones:  getDuraciones(),
+        sectorCtx:   store.get('ryvar_sector_ctx_all')  || {},
+        promptRules: store.get('ryvar_prompt_rules')    || {},
+      })
+    });
+  } catch(e) { console.warn('Sync KV falló'); }
+}
+
+async function syncPendingToKV(action, itemOrId) {
+  try {
+    const body = action === 'add'
+      ? { action: 'add',    item:        itemOrId }
+      : { action: 'remove', generatedAt: itemOrId };
+    await fetch(WORKER + '/pending', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+  } catch(e) { console.warn('Sync pending KV falló'); }
+}
+
+// ── PROMPT STUDIO ─────────────────────────────────────────────────────
+const DEFAULT_PROMPT_RULES = {
+  identidad:   'Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.',
+  hookNumeros: 'HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.',
+  hookMarca:   'HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.',
+  estructura:  'ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.',
+};
+
+function getPromptRules() {
+  const saved = store.get('ryvar_prompt_rules') || {};
+  return { ...DEFAULT_PROMPT_RULES, ...saved };
+}
+
+function loadPromptStudio() {
+  const r = getPromptRules();
+  document.getElementById('ps-identidad').value    = r.identidad;
+  document.getElementById('ps-hook-numeros').value = r.hookNumeros;
+  document.getElementById('ps-hook-marca').value   = r.hookMarca;
+  document.getElementById('ps-estructura').value   = r.estructura;
+}
+
+async function savePromptRules() {
+  const rules = {
+    identidad:   document.getElementById('ps-identidad').value.trim(),
+    hookNumeros: document.getElementById('ps-hook-numeros').value.trim(),
+    hookMarca:   document.getElementById('ps-hook-marca').value.trim(),
+    estructura:  document.getElementById('ps-estructura').value.trim(),
+  };
+  store.set('ryvar_prompt_rules', rules);
+  const st = document.getElementById('ps-status');
+  try {
+    await fetch(WORKER + '/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ promptRules: rules })
+    });
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Guardado y sincronizado en todos los dispositivos';
+  } catch(e) {
+    st.style.color = 'var(--muted)';
+    st.textContent = 'Guardado localmente (sin conexión)';
+  }
+  setTimeout(() => st.textContent = '', 4000);
+}
+
+// ── STYLE PROFILE (auto-generado cada 5 aprobados) ────────────────────
+async function generateStyleProfile(sector, tipo) {
+  try {
+    const res = await fetch(`${WORKER}/examples?sector=${encodeURIComponent(sector)}&tipo=${encodeURIComponent(tipo)}`);
+    const { examples=[] } = await res.json();
+    if (examples.length < 3) return;
+    const scriptsText = examples.slice(0, 12).map((e, i) =>
+      `[${i+1}] Hook: ${e.hook}${e.hook_apellido?' / Segundo: '+e.hook_apellido:''}\nCuerpo: ${(e.cuerpo||'').substring(0,250)}\nCTA: ${e.cta||''}`
+    ).join('\n\n');
+    const profileRes = await fetch(WORKER, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: 'Analista de contenido. Responde SOLO con el análisis, sin preámbulos ni títulos.',
+        messages: [{role:'user', content:`Analiza estos guiones aprobados de tipo ${tipo.toUpperCase()} para el sector "${sector}". Describe en máximo 180 palabras los patrones de estilo: qué tienen en común los hooks, cómo arranca el cuerpo, qué tono tiene el CTA, qué palabras o frases se repiten.\n\n${scriptsText}`}]
+      })
+    });
+    const pd = await profileRes.json();
+    const profile = pd.content?.find(b=>b.type==='text')?.text || '';
+    if (!profile) return;
+    await fetch(WORKER + '/style-profile', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sector, tipo, profile })
+    });
+    console.log(`Perfil de estilo actualizado: ${sector}/${tipo}`);
+  } catch(e) { console.warn('Style profile generation failed', e); }
+}
+
 </script>
 </body>
 </html>
