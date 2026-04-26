@@ -272,6 +272,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           <div class="pill" onclick="selectModo(this,'hook')">Hook</div>
           <div class="pill" onclick="selectModo(this,'desarrollo')">Desarrollo</div>
           <div class="pill" onclick="selectModo(this,'cta')">CTA</div>
+          <div class="pill" onclick="selectModo(this,'overlay')" style="border-color:rgba(124,58,237,.4)">✦ Overlay</div>
         </div>
         <input type="hidden" id="modo-gen" value="completo">
       </div>
@@ -342,12 +343,30 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           <div class="script-meta" id="out-chips"></div>
           <div style="display:flex;gap:8px;flex-shrink:0">
             <button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copiar</button>
+            <button class="btn btn-ghost btn-sm" id="btn-employee-edit" onclick="toggleEmployeeEdit()">✏ Editar</button>
             <button id="btn-discard-version" class="btn btn-ghost btn-sm" onclick="discardVersion()" style="color:var(--muted)">✕ Descartar</button>
             <button id="btn-select-version" class="btn btn-primary btn-sm" onclick="selectVersion()">✓ Versión seleccionada</button>
           </div>
         </div>
         <div id="out-content"></div>
         <div id="regen-btns" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+        <!-- EMPLOYEE EDIT FORM -->
+        <div id="employee-edit-form" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--accent-l);margin-bottom:12px">✏ Editar antes de enviar</div>
+          <div class="field" id="ee-f-hook"><label>Hook</label><input type="text" id="ee-hook"></div>
+          <div class="field" id="ee-f-apellido" style="display:none"><label>Segundo Golpe</label><input type="text" id="ee-hook-apellido"></div>
+          <div class="field" id="ee-f-cuerpo" style="display:none"><label>Desarrollo</label><textarea id="ee-cuerpo" rows="5"></textarea></div>
+          <div class="field" id="ee-f-cta" style="display:none"><label>CTA</label><input type="text" id="ee-cta"></div>
+          <div class="field" id="ee-f-overlays" style="display:none">
+            <label>Overlay 1</label><input type="text" id="ee-ov-0" style="margin-bottom:6px">
+            <label>Overlay 2</label><input type="text" id="ee-ov-1" style="margin-bottom:6px">
+            <label>Overlay 3</label><input type="text" id="ee-ov-2">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-ghost btn-sm" style="flex:1" onclick="toggleEmployeeEdit()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveEmployeeEdit()">✓ Guardar cambios</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -396,6 +415,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <button class="admin-tab" onclick="switchTab('duraciones',this)">Duraciones</button>
     <button class="admin-tab" onclick="switchTab('prompt',this)">Prompt Studio</button>
     <button class="admin-tab" onclick="switchTab('reels',this)">Reels Ref.</button>
+    <button class="admin-tab" onclick="switchTab('overlays',this)">Overlays</button>
     <button class="admin-tab" onclick="switchTab('basedatos',this)">Base de Datos</button>
     <button class="admin-tab" onclick="switchTab('config',this)">Config</button>
   </div>
@@ -505,6 +525,37 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       <div id="reels-list" style="font-size:12px;color:var(--muted);margin-top:8px">Cargando...</div>
     </div>
 
+    <!-- OVERLAYS -->
+    <div class="admin-section" id="tab-overlays">
+      <h3>Indicaciones Generales de Overlay</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Define el estilo base para todos los textos de overlay. Aplica a todos los sectores como primera capa.</p>
+      <div class="field">
+        <textarea id="overlay-rules-input" rows="5" placeholder="Ej: Los textos de overlay deben ser cortos (máx 8 palabras), directos e impactantes. Sin emojis. Deben detener el scroll inmediatamente. Usa verbos de acción o preguntas que incomoden..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveOverlayRules()">💾 Guardar indicaciones</button>
+      <div id="overlay-rules-status" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;min-height:16px"></div>
+
+      <div class="divider"></div>
+      <h3>Ejemplos por Sector</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Guarda textos de overlay que han funcionado. Los del sector activo tienen prioridad al generar.</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="overlay-ex-sector" style="flex:1"><option value="">— Sector —</option></select>
+        <input type="text" id="overlay-ex-tema" placeholder="Tema (opcional)" style="flex:1">
+      </div>
+      <div class="field">
+        <textarea id="overlay-ex-texto" rows="2" placeholder="Texto de overlay que ha funcionado..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveOverlayExample()">+ Guardar ejemplo</button>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="overlay-filter-sector" style="flex:1" onchange="loadOverlayExamples()">
+          <option value="">Todos los sectores</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadOverlayExamples()">↻ Cargar</button>
+      </div>
+      <div id="overlay-examples-list" style="font-size:12px;color:var(--muted)">Presiona ↻ Cargar para ver los ejemplos.</div>
+    </div>
+
     <!-- CONFIG -->
     <div class="admin-section" id="tab-config">
       <h3>Acceso de empleados</h3>
@@ -582,11 +633,26 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       <button class="btn btn-icon" onclick="closeReviewModal()">✕</button>
     </div>
     <div class="review-card-body" id="rm-body"></div>
-    <div class="review-card-footer">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeReviewModal()">Cerrar</button>
-      <button class="btn btn-red" style="flex:1" onclick="rejectGuionModal()">✕ Rechazar</button>
-      <button class="btn" style="flex:1;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidStyleModal()">⚠ Evitar estilo</button>
-      <button class="btn btn-green" style="flex:1" onclick="approveGuionModal()">✓ Aprobar</button>
+    <!-- Edit form inside review modal -->
+    <div id="rm-edit-form" style="display:none;padding:16px 22px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--accent-l);margin-bottom:10px">✏ Editar guión</div>
+      <div class="field" id="rm-f-hook"><label>Hook</label><input type="text" id="rm-hook"></div>
+      <div class="field" id="rm-f-apellido" style="display:none"><label>Segundo Golpe</label><input type="text" id="rm-hook-apellido"></div>
+      <div class="field" id="rm-f-cuerpo" style="display:none"><label>Desarrollo</label><textarea id="rm-cuerpo" rows="5"></textarea></div>
+      <div class="field" id="rm-f-cta" style="display:none"><label>CTA</label><input type="text" id="rm-cta"></div>
+      <div class="field" id="rm-f-overlays" style="display:none">
+        <label>Overlay 1</label><input type="text" id="rm-ov-0" style="margin-bottom:6px">
+        <label>Overlay 2</label><input type="text" id="rm-ov-1" style="margin-bottom:6px">
+        <label>Overlay 3</label><input type="text" id="rm-ov-2">
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px" onclick="saveReviewEdit()">✓ Guardar cambios</button>
+    </div>
+    <div class="review-card-footer" style="flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="closeReviewModal()">Cerrar</button>
+      <button class="btn btn-ghost btn-sm" id="rm-edit-btn" onclick="toggleReviewEdit()">✏ Editar</button>
+      <button class="btn btn-red btn-sm" onclick="rejectGuionModal()">✕ Rechazar</button>
+      <button class="btn btn-sm" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" id="rm-avoid-btn" onclick="avoidStyleModal()">⚠ Evitar</button>
+      <button class="btn btn-green btn-sm" style="flex:1" onclick="approveGuionModal()">✓ Aprobar</button>
     </div>
   </div>
 </div>
@@ -710,19 +776,24 @@ function selectModo(el, modo) {
   document.querySelectorAll('#modo-pills .pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('modo-gen').value = modo;
-  const showDuracion  = modo === 'completo' || modo === 'desarrollo';
-  const showElementos = modo === 'completo' || modo === 'desarrollo';
-  const showHookRef   = modo === 'desarrollo' || modo === 'cta';
+  const isOverlay = modo === 'overlay';
+  const showDuracion  = !isOverlay && (modo === 'completo' || modo === 'desarrollo');
+  const showElementos = !isOverlay && (modo === 'completo' || modo === 'desarrollo');
+  const showHookRef   = !isOverlay && (modo === 'desarrollo' || modo === 'cta');
   document.getElementById('field-duracion').style.display  = showDuracion  ? '' : 'none';
   document.getElementById('field-elementos').style.display = showElementos ? '' : 'none';
   document.getElementById('field-hook-ref').style.display  = showHookRef   ? '' : 'none';
+  // Ocultar tipo de guión para overlay (no aplica)
+  const tipoField = document.getElementById('tipo-pills')?.closest?.('.field');
+  if (tipoField) tipoField.style.display = isOverlay ? 'none' : '';
   const labels = {
     completo:   '⚡ Generar Guión Completo',
     hook:       '⚡ Generar Hook',
     desarrollo: '⚡ Generar Desarrollo',
     cta:        '⚡ Generar CTA',
+    overlay:    '✦ Generar Overlays',
   };
-  document.getElementById('btn-gen').textContent = labels[modo];
+  document.getElementById('btn-gen').textContent = labels[modo] || '⚡ Generar';
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
@@ -870,8 +941,127 @@ function switchTab(tab, btn) {
   if (tab === 'cola')      loadQueueList();
   if (tab === 'prompt')   loadPromptStudio();
   if (tab === 'reels')    { loadReelSectorSel(); loadReelsList(); }
+  if (tab === 'overlays') { loadOverlayRules(); loadOverlayExSectorSel(); loadOverlayFilterSel(); }
   if (tab === 'basedatos'){ loadApprovedSectorFilter(); loadAvoidSectorFilter(); loadApprovedList(); loadAvoidStylesList(); }
   if (tab === 'config')   {}
+}
+
+// ── OVERLAY ADMIN ─────────────────────────────────────────────────────
+async function saveOverlayRules() {
+  const rules = document.getElementById('overlay-rules-input').value.trim();
+  const st = document.getElementById('overlay-rules-status');
+  // Guardar en localStorage y en D1 via prompt-rules con key 'overlayRules'
+  const pr = store.get('ryvar_prompt_rules') || {};
+  pr.overlayRules = rules;
+  store.set('ryvar_prompt_rules', pr);
+  try {
+    await fetch(WORKER + '/prompt-rules', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ overlayRules: rules })
+    });
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Indicaciones guardadas en base de datos';
+  } catch(e) {
+    st.style.color = 'var(--muted)';
+    st.textContent = 'Guardado localmente (sin conexión a D1)';
+  }
+  setTimeout(() => st.textContent = '', 3500);
+}
+
+function loadOverlayRules() {
+  const pr = getPromptRules();
+  const el = document.getElementById('overlay-rules-input');
+  if (el) el.value = pr.overlayRules || '';
+}
+
+function loadOverlayExSectorSel() {
+  const sel = document.getElementById('overlay-ex-sector');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Sector —</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function loadOverlayFilterSel() {
+  const sel = document.getElementById('overlay-filter-sector');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todos los sectores</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+async function saveOverlayExample() {
+  const sector = document.getElementById('overlay-ex-sector').value;
+  const tema   = document.getElementById('overlay-ex-tema').value.trim();
+  const texto  = document.getElementById('overlay-ex-texto').value.trim();
+  if (!sector || !texto) {
+    showToast('El sector y el texto son obligatorios');
+    return;
+  }
+  try {
+    const res = await fetch(WORKER + '/overlay-examples', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sector, texto, tema })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error servidor');
+    document.getElementById('overlay-ex-texto').value = '';
+    document.getElementById('overlay-ex-tema').value  = '';
+    showToast('Ejemplo guardado ✓');
+    loadOverlayExamples();
+  } catch(e) { showToast('Error al guardar: ' + e.message); }
+}
+
+async function loadOverlayExamples() {
+  const sector = document.getElementById('overlay-filter-sector')?.value || '';
+  const el = document.getElementById('overlay-examples-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:12px">Cargando...</div>';
+  try {
+    const url = sector
+      ? `${WORKER}/overlay-examples?sector=${encodeURIComponent(sector)}`
+      : `${WORKER}/overlay-examples`;
+    const res = await fetch(url);
+    const { examples = [] } = await res.json();
+    if (!examples.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px">Sin ejemplos guardados aún.</div>';
+      return;
+    }
+    el.innerHTML = examples.map(e => {
+      const sLbl = getSectors().find(s=>s.value===e.sector)?.label || e.sector;
+      return `<div class="queue-item" style="margin-bottom:8px;cursor:default;display:flex;gap:10px;align-items:center">
+        <div style="flex:1;min-width:0">
+          <div class="queue-item-meta">${esc(sLbl)}${e.tema?' · '+esc(e.tema):''}</div>
+          <div class="queue-item-hook" style="font-size:13px">${esc(e.texto)}</div>
+        </div>
+        <button class="btn btn-red btn-sm" onclick="deleteOverlayExample(${e.id})" style="flex-shrink:0;padding:6px 10px">🗑</button>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">Error al cargar: ${esc(e.message)}</div>`; }
+}
+
+async function deleteOverlayExample(id) {
+  try {
+    await fetch(WORKER + '/overlay-examples', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id })
+    });
+    showToast('Ejemplo eliminado');
+    loadOverlayExamples();
+  } catch(e) { showToast('Error al eliminar'); }
 }
 
 // ─── PIN GENERATION — guardado en D1 para funcionar entre dispositivos ────────
@@ -1075,15 +1265,20 @@ function loadQueueList() {
     const div = document.createElement('div');
     div.className = 'queue-item';
     div.onclick = () => openReviewModal(idx);
+    const isOvMode = item.modo === 'overlay';
+    const overlays = item.guion?.overlays || [];
     div.innerHTML = `
-      <div class="queue-item-meta">${esc(sectorLabel)} · ${item.tipo==='numeros'?'Números':'Marca'} · ${esc(item.plataforma||'')}</div>
-      <div class="queue-item-hook">${esc(item.guion.hook)}</div>
-      ${item.guion.hook_apellido && item.tipo==='numeros' ? `<div class="queue-item-snippet" style="color:var(--accent-l);font-style:italic">${esc(item.guion.hook_apellido)}</div>` : ''}
-      <div class="queue-item-snippet">${esc((item.guion.cuerpo||'').substring(0,110))}...</div>
+      <div class="queue-item-meta">${esc(sectorLabel)} · ${isOvMode ? '<span style="color:#A855F7">✦ Overlay</span>' : (item.tipo==='numeros'?'Números':'Marca')} · ${esc(item.plataforma||'')}</div>
+      ${isOvMode
+        ? `<div class="queue-item-hook" style="color:var(--accent-l)">✦ ${esc((overlays[0]||'Overlay').substring(0,80))}</div>
+           ${overlays[1] ? `<div class="queue-item-snippet" style="color:var(--muted)">+ ${esc((overlays[1]).substring(0,60))}${overlays[2]?' · '+esc((overlays[2]).substring(0,40)):''}</div>` : ''}`
+        : `<div class="queue-item-hook">${esc(item.guion.hook)}</div>
+           ${item.guion.hook_apellido && item.tipo==='numeros' ? `<div class="queue-item-snippet" style="color:var(--accent-l);font-style:italic">${esc(item.guion.hook_apellido)}</div>` : ''}
+           <div class="queue-item-snippet">${esc((item.guion.cuerpo||'').substring(0,110))}...</div>`}
       <div class="queue-actions" onclick="event.stopPropagation()">
         <button class="btn btn-green btn-sm" style="flex:1" onclick="approveGuion(${idx})">✓ Aprobar</button>
         <button class="btn btn-red btn-sm" style="flex:1" onclick="rejectGuion(${idx})">✗ Rechazar</button>
-        <button class="btn btn-sm" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidGuion(${idx})">⚠</button>
+        ${!isOvMode ? `<button class="btn btn-sm" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidGuion(${idx})">⚠</button>` : ''}
       </div>`;
     listEl.appendChild(div);
   });
@@ -1094,45 +1289,61 @@ async function approveGuion(idx) {
   const item = pending[idx];
   if (!item) return;
 
-  try {
-    const res = await fetch(WORKER + '/approved', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({...item, approvedAt: Date.now()})
-    });
-    const data = await res.json();
+  const isOverlay = item.modo === 'overlay';
 
-    // Si el Worker devuelve error, lanzar excepción para activar fallback
-    if (!res.ok || data.error) throw new Error(data.error || `Worker error ${res.status}`);
+  try {
+    let res, data;
+    if (isOverlay) {
+      // Overlay aprobado: guardar cada texto como ejemplo en overlay_examples
+      const overlays = item.guion?.overlays || [];
+      for (const texto of overlays) {
+        if (!texto) continue;
+        await fetch(WORKER + '/overlay-examples', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ sector: item.sector, texto, tema: item.tema || '' })
+        });
+      }
+      data = { ok: true };
+    } else {
+      res = await fetch(WORKER + '/approved', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({...item, approvedAt: Date.now()})
+      });
+      data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Worker error ${res.status}`);
+    }
 
     // Confirmar guardado — ahora sí eliminar de la cola
     pending.splice(idx, 1);
     store.set('ryvar_pending', pending);
     syncPendingToKV('remove', item.generatedAt).catch(()=>{});
 
-    // Actualizar contador con total real de D1
-    const el = document.getElementById('approved-count');
-    if (el && data.total !== undefined) el.textContent = `${data.total} guión${data.total!==1?'es':''} aprobado${data.total!==1?'s':''} en base de datos`;
+    if (!isOverlay) {
+      // Actualizar contador con total real de D1
+      const el = document.getElementById('approved-count');
+      if (el && data.total !== undefined) el.textContent = `${data.total} guión${data.total!==1?'es':''} aprobado${data.total!==1?'s':''} en base de datos`;
 
-    // Auto-generar perfil de estilo cada 5 aprobados
-    if (data.total > 0 && data.total % 5 === 0) generateStyleProfile(item.sector, item.tipo);
+      // Auto-generar perfil de estilo cada 5 aprobados
+      if (data.total > 0 && data.total % 5 === 0) generateStyleProfile(item.sector, item.tipo);
+    }
 
-    // Limpiar banner de error (si hubo uno previo) y refrescar lista BD si está visible
+    // Limpiar banner de error y refrescar lista BD
     const queueErr = document.getElementById('queue-error-banner');
     if (queueErr) queueErr.style.display = 'none';
     if (document.getElementById('tab-basedatos')?.classList.contains('active')) loadApprovedList();
 
-    showToast('Guión aprobado ✓');
+    showToast(isOverlay ? `${(item.guion?.overlays||[]).filter(Boolean).length} overlays guardados como ejemplos ✓` : 'Guión aprobado ✓');
   } catch(e) {
-    // Fallback a localStorage si D1 falla — el item se queda en la cola también
-    const approved = store.get('ryvar_approved') || [];
-    approved.push({...item, approvedAt: Date.now()});
-    store.set('ryvar_approved', approved);
-    console.error('D1 approve failed:', e.message);
-    // Mostrar error en la cola además del toast (para que no se pierda)
+    if (!isOverlay) {
+      const approved = store.get('ryvar_approved') || [];
+      approved.push({...item, approvedAt: Date.now()});
+      store.set('ryvar_approved', approved);
+    }
+    console.error('Approve failed:', e.message);
     const errMsg = e.message || 'error desconocido';
-    showToast('⚠ Error D1: ' + errMsg.substring(0, 80));
-    // Poner banner de error en la cola
+    showToast('⚠ Error al aprobar: ' + errMsg.substring(0, 80));
     const queueErr = document.getElementById('queue-error-banner');
     if (queueErr) { queueErr.textContent = '⚠ Error al aprobar: ' + errMsg; queueErr.style.display = ''; }
   }
@@ -1168,15 +1379,27 @@ function openReviewModal(idx) {
   if (!item) return;
   currentReviewIdx = idx;
   const g = item.guion;
+  const isOverlay = item.modo === 'overlay';
   const sectorLabel = getSectors().find(s=>s.value===item.sector)?.label || item.sector || '—';
-  document.getElementById('rm-title').textContent = item.cliente || 'Guión';
-  document.getElementById('rm-meta').textContent =
-    `${sectorLabel} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma||''} · ${new Date(item.generatedAt||Date.now()).toLocaleString('es-DO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`;
-  document.getElementById('rm-body').innerHTML = buildScriptHtml(g, item.tipo, item.modo||'completo');
+  document.getElementById('rm-title').textContent = item.cliente || (isOverlay ? 'Overlays' : 'Guión');
+  document.getElementById('rm-meta').textContent = isOverlay
+    ? `${sectorLabel} · ✦ Overlay · ${item.plataforma||''} · ${new Date(item.generatedAt||Date.now()).toLocaleString('es-DO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`
+    : `${sectorLabel} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma||''} · ${new Date(item.generatedAt||Date.now()).toLocaleString('es-DO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('rm-body').innerHTML = isOverlay
+    ? buildOverlayHtml(g.overlays || [])
+    : buildScriptHtml(g, item.tipo, item.modo||'completo');
+  // Ocultar botón ⚠ Evitar en modo overlay (no aplica)
+  const avoidBtn = document.getElementById('rm-avoid-btn');
+  if (avoidBtn) avoidBtn.style.display = isOverlay ? 'none' : '';
+  // Resetear estado de edición
+  document.getElementById('rm-edit-form').style.display = 'none';
+  document.getElementById('rm-edit-btn').textContent = '✏ Editar';
   document.getElementById('review-modal').classList.add('visible');
 }
 function closeReviewModal() {
   document.getElementById('review-modal').classList.remove('visible');
+  document.getElementById('rm-edit-form').style.display = 'none';
+  document.getElementById('rm-edit-btn').textContent = '✏ Editar';
   currentReviewIdx = -1;
 }
 async function approveGuionModal() {
@@ -1591,6 +1814,24 @@ async function getExamples(sector, tipo) {
     return out;
   }
 }
+async function getOverlayExamples(sector) {
+  try {
+    // Priorizar ejemplos del sector activo, luego completar con otros sectores
+    const [sectorRes, allRes] = await Promise.all([
+      fetch(`${WORKER}/overlay-examples?sector=${encodeURIComponent(sector)}`),
+      fetch(`${WORKER}/overlay-examples`),
+    ]);
+    const { examples: sectorExs = [] } = await sectorRes.json();
+    const { examples: allExs   = [] } = await allRes.json();
+    const combined = [...sectorExs, ...allExs.filter(e => e.sector !== sector)].slice(0, 12);
+    if (!combined.length) return '';
+    return `OVERLAYS QUE HAN FUNCIONADO (referencia de estilo — no copies, úsalos para calibrar tono):\n` +
+      combined.map(e =>
+        `• ${e.texto}${e.tema ? ' [tema: '+e.tema+']' : ''}${e.sector !== sector ? ' (sector: '+e.sector+')' : ''}`
+      ).join('\n');
+  } catch(e) { return ''; }
+}
+
 function updateExampleCount() {
   const total = (store.get('ryvar_approved') || []).length;
   document.getElementById('example-count').textContent =
@@ -1643,7 +1884,9 @@ async function generarGuion() {
   document.getElementById('btn-gen').disabled = true;
 
   // Obtener ejemplos de D1 mientras se muestra el loader
-  const ejemplos = await getExamples(sector, tipo);
+  const ejemplos = modo === 'overlay'
+    ? await getOverlayExamples(sector)
+    : await getExamples(sector, tipo);
 
   // Ángulos de diferenciación sugeridos según el último hook usado
   const ANGULOS = [
@@ -1698,15 +1941,22 @@ async function generarGuion() {
       jsonFormat:  `{"cta":"llamado a la acción exacto y poderoso"}`,
       instruccion: `Genera SOLO el CTA (llamado a la acción).${hookRef?' El contexto del guión es el siguiente hook/desarrollo — el CTA debe ser coherente con él.':''}`,
     },
+    overlay: {
+      rules: getPromptRules().overlayRules || 'Genera 3 textos de overlay impactantes para videos cortos. Cada texto debe ser una frase corta (máx 8 palabras), viral, relatable y sin emojis. Deben detener el scroll inmediatamente.',
+      jsonFormat: `{"overlays":["texto overlay 1","texto overlay 2","texto overlay 3"]}`,
+      instruccion: 'Genera exactamente 3 textos de overlay para video corto.',
+    },
   };
   const mc = modoConfig[modo];
 
-  // Sistema: identidad → anti-repetición (PRIMERO) → sector → reglas → ejemplos → formato
+  const isOverlayMode = modo === 'overlay';
+
+  // Sistema: identidad → anti-repetición (solo para modos normales) → sector → reglas → ejemplos → formato
   const systemPrompt = [
     pr.identidad,
-    sessionHooksCtx || '',   // <-- ANTES de ejemplos para que tenga mayor peso
+    (!isOverlayMode && sessionHooksCtx) ? sessionHooksCtx : '',  // <-- solo para modos de guión
     `CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}`,
-    sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : '',
+    (!isOverlayMode && sectorRules) ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : '',
     mc.rules || '',
     ejemplos || '',
     `RESPONDE SOLO con este JSON sin markdown ni texto extra:\n${mc.jsonFormat}`,
@@ -1720,7 +1970,9 @@ async function generarGuion() {
         model: 'claude-sonnet-4-5',
         max_tokens: modo==='completo' ? 2000 : 600,
         system: systemPrompt,
-        messages:[{role:'user', content:`${mc.instruccion}
+        messages:[{role:'user', content: isOverlayMode
+          ? `${mc.instruccion}\nCliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nTema: ${tema}\n${notas?'Notas: '+notas:''}\n\nSolo el JSON.`
+          : `${mc.instruccion}
 Cliente: ${cliente||'Sin especificar'}
 Sector: ${sectorLabel}
 Plataforma: ${platLabel}
@@ -1743,7 +1995,7 @@ Solo el JSON.`}]
     const raw = data.content?.find(b=>b.type==='text')?.text || '';
     let g;
     try { g = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
-    catch { g = {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
+    catch { g = isOverlayMode ? {overlays:[raw.substring(0,120),'','']} : {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
 
     lastGuionData = {guion:g, modo, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
     versionSelected = false;
@@ -1814,7 +2066,26 @@ function buildScriptHtml(g, tipo, modo='completo') {
   return html;
 }
 
-const MODO_LABEL = { completo:'Completo', hook:'Hook', desarrollo:'Desarrollo', cta:'CTA' };
+const MODO_LABEL = { completo:'Completo', hook:'Hook', desarrollo:'Desarrollo', cta:'CTA', overlay:'Overlay' };
+
+// ─── OVERLAY OUTPUT ───────────────────────────────────────────────────────────
+let _lastOverlayTexts = [];
+function buildOverlayHtml(overlays) {
+  if (!overlays || !overlays.length) return '<div style="color:var(--muted);font-size:12px">Sin overlays generados.</div>';
+  return overlays.map((t, i) => `
+    <div class="script-section" style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div class="section-label"><span class="section-dot dot-hook"></span>Overlay ${i+1}</div>
+        <div class="hook-text" id="ov-text-${i}">${esc(t)}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="copyOverlay(${i})" style="flex-shrink:0" title="Copiar">📋</button>
+    </div>`).join('');
+}
+function copyOverlay(i) {
+  const text = _lastOverlayTexts[i];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => showToast(`Overlay ${i+1} copiado`));
+}
 
 function renderGuion(g, cliente, plataforma, sector, tipo, durLabel, modo='completo') {
   document.getElementById('empty-state').style.display = 'none';
@@ -1822,6 +2093,15 @@ function renderGuion(g, cliente, plataforma, sector, tipo, durLabel, modo='compl
   out.classList.add('visible');
   const modoChip = `<span class="chip" style="background:rgba(124,58,237,.25);border-color:var(--accent)">${MODO_LABEL[modo]||modo}</span>`;
   const durChip  = (modo==='completo'||modo==='desarrollo') ? `<span class="chip">${esc(g.duracion_estimada||durLabel)}</span>` : '';
+  if (modo === 'overlay') {
+    const overlays = g.overlays || [];
+    _lastOverlayTexts = overlays;
+    document.getElementById('out-chips').innerHTML = `${modoChip}<span class="chip">${esc(sector)}</span><span class="chip">${esc(plataforma)}</span>`;
+    document.getElementById('out-content').innerHTML = buildOverlayHtml(overlays);
+    renderRegenButtons(modo, tipo);
+    out.scrollIntoView({behavior:'smooth'});
+    return;
+  }
   document.getElementById('out-chips').innerHTML = `
     ${modoChip}
     <span class="chip">${tipo==='numeros'?'Números':'Marca'}</span>
@@ -1859,7 +2139,7 @@ function renderHistory() {
     const title = (item.tema||item.cliente||'Sin tema').substring(0,28);
     return `<div class="history-card ${i===0?'active':''}" onclick="loadFromHistory(${item.generatedAt})">
       <div class="history-card-title">${esc(title)}${vLabel}</div>
-      <div class="history-card-meta">${MODO_LABEL[item.modo]||'Completo'} · ${item.tipo==='numeros'?'Núm':'Marca'} · ${new Date(item.generatedAt).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="history-card-meta">${MODO_LABEL[item.modo]||'Completo'} · ${item.modo==='overlay'?'✦':(item.tipo==='numeros'?'Núm':'Marca')} · ${new Date(item.generatedAt).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</div>
     </div>`;
   }).join('');
 }
@@ -1872,6 +2152,141 @@ function loadFromHistory(ts) {
   renderGuion(item.guion, item.cliente, item.plataforma, sectorLabel, item.tipo, durObj.label, item.modo||'completo');
   document.querySelectorAll('.history-card').forEach(c=>c.classList.remove('active'));
   event.currentTarget.classList.add('active');
+}
+
+// ─── EMPLOYEE EDIT (antes de enviar a cola) ───────────────────────────────────
+function toggleEmployeeEdit() {
+  if (!lastGuionData) return;
+  const form = document.getElementById('employee-edit-form');
+  const isOpen = form.style.display !== 'none';
+  if (isOpen) { form.style.display = 'none'; return; }
+
+  const g    = lastGuionData.guion;
+  const modo = lastGuionData.modo || 'completo';
+  const tipo = lastGuionData.tipo || 'marca';
+  const isOverlay = modo === 'overlay';
+
+  // Mostrar/ocultar campos según modo
+  document.getElementById('ee-f-hook').style.display     = (!isOverlay && (modo==='hook'||modo==='completo')) ? '' : 'none';
+  document.getElementById('ee-f-apellido').style.display = (!isOverlay && tipo==='numeros' && (modo==='hook'||modo==='completo')) ? '' : 'none';
+  document.getElementById('ee-f-cuerpo').style.display   = (!isOverlay && (modo==='desarrollo'||modo==='completo')) ? '' : 'none';
+  document.getElementById('ee-f-cta').style.display      = (!isOverlay && (modo==='cta'||modo==='completo')) ? '' : 'none';
+  document.getElementById('ee-f-overlays').style.display = isOverlay ? '' : 'none';
+
+  // Precargar valores
+  if (!isOverlay) {
+    document.getElementById('ee-hook').value          = g.hook || '';
+    document.getElementById('ee-hook-apellido').value = g.hook_apellido || '';
+    document.getElementById('ee-cuerpo').value        = g.cuerpo || '';
+    document.getElementById('ee-cta').value           = g.cta || '';
+  } else {
+    const ovs = g.overlays || [];
+    document.getElementById('ee-ov-0').value = ovs[0] || '';
+    document.getElementById('ee-ov-1').value = ovs[1] || '';
+    document.getElementById('ee-ov-2').value = ovs[2] || '';
+  }
+  form.style.display = '';
+}
+
+function saveEmployeeEdit() {
+  if (!lastGuionData) return;
+  const modo = lastGuionData.modo || 'completo';
+  const isOverlay = modo === 'overlay';
+  if (isOverlay) {
+    lastGuionData.guion.overlays = [
+      document.getElementById('ee-ov-0').value.trim(),
+      document.getElementById('ee-ov-1').value.trim(),
+      document.getElementById('ee-ov-2').value.trim(),
+    ].filter(Boolean);
+    _lastOverlayTexts = lastGuionData.guion.overlays;
+    document.getElementById('out-content').innerHTML = buildOverlayHtml(lastGuionData.guion.overlays);
+  } else {
+    if (document.getElementById('ee-f-hook').style.display !== 'none')
+      lastGuionData.guion.hook = document.getElementById('ee-hook').value.trim();
+    if (document.getElementById('ee-f-apellido').style.display !== 'none')
+      lastGuionData.guion.hook_apellido = document.getElementById('ee-hook-apellido').value.trim();
+    if (document.getElementById('ee-f-cuerpo').style.display !== 'none')
+      lastGuionData.guion.cuerpo = document.getElementById('ee-cuerpo').value.trim();
+    if (document.getElementById('ee-f-cta').style.display !== 'none')
+      lastGuionData.guion.cta = document.getElementById('ee-cta').value.trim();
+    document.getElementById('out-content').innerHTML = buildScriptHtml(lastGuionData.guion, lastGuionData.tipo, modo);
+  }
+  document.getElementById('employee-edit-form').style.display = 'none';
+  showToast('Cambios guardados ✓');
+}
+
+// ─── REVIEW MODAL EDIT (admin edita antes de aprobar) ────────────────────────
+function toggleReviewEdit() {
+  if (currentReviewIdx < 0) return;
+  const form = document.getElementById('rm-edit-form');
+  const isOpen = form.style.display !== 'none';
+  if (isOpen) {
+    form.style.display = 'none';
+    document.getElementById('rm-edit-btn').textContent = '✏ Editar';
+    return;
+  }
+
+  const pending = store.get('ryvar_pending') || [];
+  const item = pending[currentReviewIdx];
+  if (!item) return;
+  const g = item.guion;
+  const modo = item.modo || 'completo';
+  const tipo = item.tipo || 'marca';
+  const isOverlay = modo === 'overlay';
+
+  // Mostrar/ocultar campos
+  document.getElementById('rm-f-hook').style.display     = (!isOverlay && (modo==='hook'||modo==='completo')) ? '' : 'none';
+  document.getElementById('rm-f-apellido').style.display = (!isOverlay && tipo==='numeros' && (modo==='hook'||modo==='completo')) ? '' : 'none';
+  document.getElementById('rm-f-cuerpo').style.display   = (!isOverlay && (modo==='desarrollo'||modo==='completo')) ? '' : 'none';
+  document.getElementById('rm-f-cta').style.display      = (!isOverlay && (modo==='cta'||modo==='completo')) ? '' : 'none';
+  document.getElementById('rm-f-overlays').style.display = isOverlay ? '' : 'none';
+
+  // Precargar valores
+  if (!isOverlay) {
+    document.getElementById('rm-hook').value          = g.hook || '';
+    document.getElementById('rm-hook-apellido').value = g.hook_apellido || '';
+    document.getElementById('rm-cuerpo').value        = g.cuerpo || '';
+    document.getElementById('rm-cta').value           = g.cta || '';
+  } else {
+    const ovs = g.overlays || [];
+    document.getElementById('rm-ov-0').value = ovs[0] || '';
+    document.getElementById('rm-ov-1').value = ovs[1] || '';
+    document.getElementById('rm-ov-2').value = ovs[2] || '';
+  }
+  form.style.display = '';
+  document.getElementById('rm-edit-btn').textContent = '✕ Cancelar edición';
+}
+
+function saveReviewEdit() {
+  if (currentReviewIdx < 0) return;
+  const pending = store.get('ryvar_pending') || [];
+  const item = pending[currentReviewIdx];
+  if (!item) return;
+  const modo = item.modo || 'completo';
+  const isOverlay = modo === 'overlay';
+  if (isOverlay) {
+    item.guion.overlays = [
+      document.getElementById('rm-ov-0').value.trim(),
+      document.getElementById('rm-ov-1').value.trim(),
+      document.getElementById('rm-ov-2').value.trim(),
+    ].filter(Boolean);
+    document.getElementById('rm-body').innerHTML = buildOverlayHtml(item.guion.overlays);
+  } else {
+    if (document.getElementById('rm-f-hook').style.display !== 'none')
+      item.guion.hook = document.getElementById('rm-hook').value.trim();
+    if (document.getElementById('rm-f-apellido').style.display !== 'none')
+      item.guion.hook_apellido = document.getElementById('rm-hook-apellido').value.trim();
+    if (document.getElementById('rm-f-cuerpo').style.display !== 'none')
+      item.guion.cuerpo = document.getElementById('rm-cuerpo').value.trim();
+    if (document.getElementById('rm-f-cta').style.display !== 'none')
+      item.guion.cta = document.getElementById('rm-cta').value.trim();
+    document.getElementById('rm-body').innerHTML = buildScriptHtml(item.guion, item.tipo, modo);
+  }
+  // Persistir cambio en localStorage
+  store.set('ryvar_pending', pending);
+  document.getElementById('rm-edit-form').style.display = 'none';
+  document.getElementById('rm-edit-btn').textContent = '✏ Editar';
+  showToast('Guión editado ✓');
 }
 
 // ─── COPY & REVIEW ────────────────────────────────────────────────────────────
@@ -1997,6 +2412,7 @@ async function loadRemoteConfig() {
       if (sr) {
         try { store.set('ryvar_sector_rules', typeof sr === 'string' ? JSON.parse(sr) : sr); } catch(e) {}
       }
+      // overlayRules también se carga automáticamente dentro de promptRules
     }
 
     // Si KV está vacío (primer uso), subir los defaults
@@ -2046,10 +2462,11 @@ async function syncPendingToKV(action, itemOrId) {
 
 // ── PROMPT STUDIO ─────────────────────────────────────────────────────
 const DEFAULT_PROMPT_RULES = {
-  identidad:   'Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.',
-  hookNumeros: 'HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.',
-  hookMarca:   'HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.',
-  estructura:  'ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.',
+  identidad:    'Eres el estratega de contenido de Ryvar Media Group, agencia boutique en Santiago, República Dominicana. Creas guiones de video que se leen TAL CUAL en cámara. Cero palabras vagas. Cada segundo cuenta.',
+  hookNumeros:  'HOOK TIPO NÚMEROS: Primera palabra acusa/incomoda/niega. Sin calentamiento. Estructura NOMBRE+APELLIDO: hook + segundo golpe que escala (no repite). El segundo golpe debe funcionar solo.',
+  hookMarca:    'HOOK TIPO MARCA: Prueba social+FOMO o indignación suave→proceso crudo→anclaje cultural. Credibilidad primero.',
+  estructura:   'ESTRUCTURA TEMPORAL: 0-3s detener scroll → 3-7s curiosidad → 8-12s reenganche → cierre CTA.',
+  overlayRules: 'Los textos de overlay deben ser cortos (máx 8 palabras), directos e impactantes. Sin emojis. Una oración. Deben detener el scroll inmediatamente. Usa verbos de acción, preguntas que incomoden o afirmaciones contraintuitivas.',
 };
 
 function getPromptRules() {
