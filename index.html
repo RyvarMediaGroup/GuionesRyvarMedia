@@ -404,6 +404,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <!-- COLA -->
     <div class="admin-section active" id="tab-cola">
       <h3>Cola de revisión</h3>
+      <div id="queue-error-banner" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#EF4444;margin-bottom:10px"></div>
       <div id="queue-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
       <div id="queue-list"></div>
     </div>
@@ -531,10 +532,14 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
 
       <div class="divider"></div>
       <h3>Contraseña Admin</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">La contraseña se guarda cifrada en la base de datos (D1). Funciona en todos los dispositivos. Mínimo 6 caracteres.</p>
       <div class="field">
-        <input type="password" id="new-admin-pw" placeholder="Nueva contraseña">
+        <label>Nueva contraseña</label>
+        <input type="password" id="new-admin-pw" placeholder="Nueva contraseña" style="margin-bottom:8px">
+        <input type="password" id="new-admin-pw-confirm" placeholder="Confirmar contraseña">
       </div>
-      <button class="btn btn-ghost" style="width:100%" onclick="changeAdminPw()">Actualizar contraseña</button>
+      <div id="admin-pw-status" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <button class="btn btn-ghost" style="width:100%" onclick="changeAdminPwWithConfirm()">Actualizar contraseña</button>
 
     </div>
 
@@ -665,7 +670,7 @@ const store = {
   get: k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch{ return null; } },
   set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
 };
-const getAdminPw = () => store.get('ryvar_admin_pw') || 'ryvar2024';
+// Auth centralizado en D1 — no se usa localStorage para contraseñas ni PINs
 const getSectors    = () => { const s = store.get('ryvar_sectors');    return (s && s.length) ? s : SECTOR_DEFAULTS;    };
 const getDuraciones = () => { const d = store.get('ryvar_duraciones'); return (d && d.length) ? d : DURACION_DEFAULTS; };
 
@@ -726,31 +731,41 @@ let isAdminSession = false;
 
 document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-function doLogin() {
+async function doLogin() {
   const pin = document.getElementById('login-pin').value.trim();
-  const now = Date.now();
-  const codes = store.get('ryvar_pins') || [];
-  // FIX: validar por expiry explícito, no calculado
-  const valid = codes.some(c => c.pin === pin && now < c.expiry);
-  if (!valid) {
-    document.getElementById('login-error').textContent = 'PIN incorrecto o expirado. Solicita uno nuevo al admin.';
-    document.getElementById('login-pin').style.borderColor = 'var(--red)';
-    setTimeout(() => {
-      document.getElementById('login-pin').style.borderColor = '';
-      document.getElementById('login-error').textContent = '';
-    }, 3000);
-    return;
-  }
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
-  // Cargar local inmediatamente para que no quede vacío
-  loadSectorSelect();
-  loadDuracionSelect();
-  updatePendingBadge();
-  // Luego actualizar desde KV (async)
-  loadRemoteConfig();
-  const sessionEnd = now + SESSION_MS;
-  startSessionTimer(sessionEnd);
+  if (!pin) return;
+  const btn = document.querySelector('#login-screen .btn-primary');
+  const setLoading = on => { if (btn) { btn.disabled = on; btn.textContent = on ? '...' : 'Ingresar'; } };
+  setLoading(true);
+  try {
+    const res  = await fetch(WORKER + '/auth/verify-pin', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pin })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    if (!data.ok) {
+      document.getElementById('login-error').textContent = 'PIN incorrecto o expirado. Solicita uno nuevo al admin.';
+      document.getElementById('login-pin').style.borderColor = 'var(--red)';
+      setTimeout(() => {
+        document.getElementById('login-pin').style.borderColor = '';
+        document.getElementById('login-error').textContent = '';
+      }, 3000);
+      return;
+    }
+    // PIN válido — entrar al app
+    const now = Date.now();
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    loadSectorSelect();
+    loadDuracionSelect();
+    updatePendingBadge();
+    loadRemoteConfig();
+    startSessionTimer(now + SESSION_MS);
+  } catch(e) {
+    document.getElementById('login-error').textContent = 'Error: ' + e.message;
+    setTimeout(() => { document.getElementById('login-error').textContent = ''; }, 4000);
+  } finally { setLoading(false); }
 }
 
 function doLogout() {
@@ -799,17 +814,31 @@ function openAdminAuth() {
 function closeAdminAuth() {
   document.getElementById('admin-auth-modal').classList.remove('visible');
 }
-function verifyAdminAuth() {
-  if (document.getElementById('admin-auth-input').value === getAdminPw()) {
-    closeAdminAuth();
-    isAdminSession = true;
-    document.getElementById('admin-btn').classList.add('show');
-    openAdmin();
-  } else {
-    document.getElementById('admin-auth-error').textContent = 'Contraseña incorrecta';
-    document.getElementById('admin-auth-input').value = '';
-    document.getElementById('admin-auth-input').focus();
-  }
+async function verifyAdminAuth() {
+  const pw  = document.getElementById('admin-auth-input').value;
+  const btn = document.querySelector('#admin-auth-modal .btn-primary');
+  const setLoading = on => { if (btn) { btn.disabled = on; btn.textContent = on ? '...' : 'Entrar'; } };
+  setLoading(true);
+  try {
+    const res  = await fetch(WORKER + '/auth/verify-admin', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    if (data.ok) {
+      closeAdminAuth();
+      isAdminSession = true;
+      document.getElementById('admin-btn').classList.add('show');
+      openAdmin();
+    } else {
+      document.getElementById('admin-auth-error').textContent = 'Contraseña incorrecta';
+      document.getElementById('admin-auth-input').value = '';
+      document.getElementById('admin-auth-input').focus();
+    }
+  } catch(e) {
+    document.getElementById('admin-auth-error').textContent = 'Error: ' + e.message;
+  } finally { setLoading(false); }
 }
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
@@ -845,20 +874,25 @@ function switchTab(tab, btn) {
   if (tab === 'config')   {}
 }
 
-// ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
-function generateNewPin() {
-  const pin = String(Math.floor(100000 + Math.random() * 900000));
-  const now = Date.now();
-  const expiry = now + SESSION_MS;
-  // limpiar expirados y agregar nuevo
-  const codes = (store.get('ryvar_pins') || []).filter(c => now < c.expiry);
-  codes.push({ pin, expiry });
-  store.set('ryvar_pins', codes);
-  document.getElementById('pin-display').textContent = pin;
-  const exp = new Date(expiry);
-  document.getElementById('pin-expiry').textContent =
-    `Expira a las ${exp.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
-  document.getElementById('pin-box').style.display = 'block';
+// ─── PIN GENERATION — guardado en D1 para funcionar entre dispositivos ────────
+async function generateNewPin() {
+  const genBtn = document.querySelector('#tab-sectores button[onclick="generateNewPin()"], [onclick="generateNewPin()"]');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⟳ Generando...'; }
+  try {
+    const res  = await fetch(WORKER + '/auth/generate-pin', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    const { pin, expiry } = data;
+    document.getElementById('pin-display').textContent = pin;
+    const exp = new Date(expiry);
+    document.getElementById('pin-expiry').textContent =
+      `Expira a las ${exp.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}`;
+    document.getElementById('pin-box').style.display = 'block';
+  } catch(e) {
+    showToast('Error al generar PIN: ' + e.message);
+  } finally {
+    if (genBtn) { genBtn.disabled = false; genBtn.textContent = '✦ Generar nuevo PIN'; }
+  }
 }
 function copyPin() {
   navigator.clipboard.writeText(document.getElementById('pin-display').textContent).then(() => {
@@ -972,12 +1006,36 @@ function saveSheetUrl() {
   const url = document.getElementById('sheets-url').value.trim();
   if (url) { store.set('ryvar_sheets_url', url); showToast('URL guardada'); }
 }
-function changeAdminPw() {
+function changeAdminPwWithConfirm() {
+  const val     = document.getElementById('new-admin-pw').value.trim();
+  const confirm = document.getElementById('new-admin-pw-confirm').value.trim();
+  const st      = document.getElementById('admin-pw-status');
+  if (!val) { if(st){st.textContent='Ingresa una contraseña';st.style.color='var(--red)';} return; }
+  if (val.length < 6) { if(st){st.textContent='Mínimo 6 caracteres';st.style.color='var(--red)';} return; }
+  if (val !== confirm) { if(st){st.textContent='Las contraseñas no coinciden';st.style.color='var(--red)';} return; }
+  changeAdminPw();
+}
+async function changeAdminPw() {
   const val = document.getElementById('new-admin-pw').value.trim();
   if (!val) return;
-  store.set('ryvar_admin_pw', val);
-  document.getElementById('new-admin-pw').value = '';
-  showToast('Contraseña actualizada');
+  if (val.length < 6) { showToast('Mínimo 6 caracteres'); return; }
+  const st = document.getElementById('admin-pw-status');
+  if (st) st.textContent = 'Guardando...';
+  try {
+    const res  = await fetch(WORKER + '/auth/change-password', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ newPassword: val })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    document.getElementById('new-admin-pw').value = '';
+    document.getElementById('new-admin-pw-confirm').value = '';
+    if (st) { st.textContent = '✓ Contraseña actualizada en la base de datos'; st.style.color = 'var(--green)'; setTimeout(()=>{ st.textContent=''; st.style.color=''; }, 4000); }
+    showToast('Contraseña actualizada ✓');
+  } catch(e) {
+    if (st) { st.textContent = '⚠ Error: ' + e.message; st.style.color = 'var(--red)'; }
+    showToast('Error: ' + e.message);
+  }
 }
 function clearApproved() {
   if (!confirm('¿Eliminar todos los guiones aprobados?')) return;
@@ -1059,6 +1117,11 @@ async function approveGuion(idx) {
     // Auto-generar perfil de estilo cada 5 aprobados
     if (data.total > 0 && data.total % 5 === 0) generateStyleProfile(item.sector, item.tipo);
 
+    // Limpiar banner de error (si hubo uno previo) y refrescar lista BD si está visible
+    const queueErr = document.getElementById('queue-error-banner');
+    if (queueErr) queueErr.style.display = 'none';
+    if (document.getElementById('tab-basedatos')?.classList.contains('active')) loadApprovedList();
+
     showToast('Guión aprobado ✓');
   } catch(e) {
     // Fallback a localStorage si D1 falla — el item se queda en la cola también
@@ -1066,7 +1129,12 @@ async function approveGuion(idx) {
     approved.push({...item, approvedAt: Date.now()});
     store.set('ryvar_approved', approved);
     console.error('D1 approve failed:', e.message);
-    showToast('⚠ Guardado localmente (error en DB: ' + e.message.substring(0, 60) + ')');
+    // Mostrar error en la cola además del toast (para que no se pierda)
+    const errMsg = e.message || 'error desconocido';
+    showToast('⚠ Error D1: ' + errMsg.substring(0, 80));
+    // Poner banner de error en la cola
+    const queueErr = document.getElementById('queue-error-banner');
+    if (queueErr) { queueErr.textContent = '⚠ Error al aprobar: ' + errMsg; queueErr.style.display = ''; }
   }
 
   await sendToSheet({...item, status:'approved', approvedAt: new Date().toISOString()});
@@ -1173,13 +1241,20 @@ async function loadAvoidStylesList() {
   try {
     const params = sector ? `?sector=${encodeURIComponent(sector)}` : '';
     const res = await fetch(`${WORKER}/avoid${params}`);
-    const { styles = [] } = await res.json();
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      el.innerHTML = `<div style="color:var(--red);font-size:12px">⚠ Error: ${data.error || res.status}</div>`;
+      return;
+    }
+    const { styles = [] } = data;
     if (!styles.length) {
       el.innerHTML = '<div style="color:var(--muted)">No hay estilos marcados para evitar.</div>';
       return;
     }
+    // Guardar en mapa para que openDetailModal los encuentre por ID
+    styles.forEach(s => { _dbItemMap['avoid_' + s.id] = s; });
     el.innerHTML = styles.map(s => `
-      <div class="queue-item" style="cursor:pointer;background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)" onclick="openDetailModal('avoid', ${JSON.stringify(JSON.stringify(s))})">
+      <div class="queue-item" style="cursor:pointer;background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)" onclick="openDetailModal('avoid', ${s.id})">
         <div class="queue-item-meta">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'}</div>
         <div class="queue-item-hook" style="color:#F59E0B">${esc(s.hook||'—')}</div>
         ${s.cuerpo ? `<div class="queue-item-snippet">${esc(s.cuerpo.substring(0,100))}...</div>` : ''}
@@ -1240,8 +1315,10 @@ async function loadApprovedList() {
       el.innerHTML = '<div style="color:var(--muted)">No hay guiones aprobados aún.</div>';
       return;
     }
+    // Guardar en mapa para que openDetailModal los encuentre por ID (evitar JSON en atributos HTML)
+    scripts.forEach(s => { _dbItemMap['approved_' + s.id] = s; });
     el.innerHTML = scripts.map(s => `
-      <div class="queue-item" style="cursor:pointer" onclick="openDetailModal('approved', ${JSON.stringify(JSON.stringify(s))})">
+      <div class="queue-item" style="cursor:pointer" onclick="openDetailModal('approved', ${s.id})">
         <div class="queue-item-meta">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'} · ${esc(s.cliente||'—')}</div>
         <div class="queue-item-hook">${esc(s.hook||'—')}</div>
         ${s.hook_apellido ? `<div style="color:var(--accent-l);font-size:12px;margin-top:2px;font-style:italic">${esc(s.hook_apellido)}</div>` : ''}
@@ -1264,9 +1341,15 @@ async function deleteApprovedScript(id) {
 let currentDetailType = '';
 let currentDetailId   = null;
 let currentDetailItem = null;
+// Mapa de items cargados desde D1 — evita pasar JSON en atributos HTML (rompe por comillas)
+const _dbItemMap = {};
 
-function openDetailModal(type, itemJson) {
-  const item = typeof itemJson === 'string' ? JSON.parse(itemJson) : itemJson;
+function openDetailModal(type, idOrItem) {
+  // Puede recibir un número (ID del mapa) o un objeto directo
+  const item = (typeof idOrItem === 'number' || (typeof idOrItem === 'string' && !idOrItem.startsWith('{')))
+    ? _dbItemMap[type + '_' + idOrItem]
+    : (typeof idOrItem === 'string' ? JSON.parse(idOrItem) : idOrItem);
+  if (!item) { showToast('Error: item no encontrado'); return; }
   currentDetailType = type;
   currentDetailId   = item.id;
   currentDetailItem = item;
@@ -1324,6 +1407,9 @@ async function saveDetailEdit() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Error al guardar');
     Object.assign(currentDetailItem, updates);
+    // Actualizar también en el mapa para que la próxima apertura refleje los cambios
+    const mapKey = currentDetailType + '_' + currentDetailId;
+    if (_dbItemMap[mapKey]) Object.assign(_dbItemMap[mapKey], updates);
     document.getElementById('dm-view').innerHTML = buildScriptHtml(
       { hook: updates.hook, hook_apellido: updates.hook_apellido, cuerpo: updates.cuerpo, cta: updates.cta },
       currentDetailItem.tipo, currentDetailItem.modo || 'completo'
@@ -1546,7 +1632,7 @@ async function generarGuion() {
   const sectorRulesAll = store.get('ryvar_sector_rules') || {};
   const sectorRules    = sectorRulesAll[sector] || '';
 
-  // Reiniciar rastreador de sesión si cambió el contexto (sector, tipo o modo)
+  // Reiniciar rastreador de sesión si cambió sector, tipo o modo
   if (sessionHooksTracker.sector !== sector ||
       sessionHooksTracker.tipo   !== tipo   ||
       sessionHooksTracker.modo   !== modo) {
@@ -1559,12 +1645,36 @@ async function generarGuion() {
   // Obtener ejemplos de D1 mientras se muestra el loader
   const ejemplos = await getExamples(sector, tipo);
 
-  // Hooks ya generados en esta sesión (mismo sector+tipo+modo) para evitar repetición
-  const sessionHooksCtx = sessionHooksTracker.hooks.length
-    ? `HOOKS YA GENERADOS EN ESTA SESIÓN (no repitas estos patrones ni variaciones similares):\n${sessionHooksTracker.hooks.map(h => `• ${h}`).join('\n')}`
+  // Ángulos de diferenciación sugeridos según el último hook usado
+  const ANGULOS = [
+    'acusación directa al problema',
+    'dato/número impactante',
+    'pregunta que incomoda',
+    'afirmación contraintuitiva',
+    'historia en 1 línea',
+    'comparación inesperada',
+    'promesa de resultado específico',
+    'error común que comete la audiencia',
+  ];
+  const hooksUsados = sessionHooksTracker.hooks.length;
+  // Rotar ángulos sugeridos según cuántos hooks se han generado ya
+  const anguloSugerido = hooksUsados > 0
+    ? ANGULOS[hooksUsados % ANGULOS.length]
+    : null;
+
+  // Bloque anti-repetición — se coloca ANTES de los ejemplos para que tenga más peso
+  const sessionHooksCtx = hooksUsados > 0
+    ? [
+        `⚠ ANTI-REPETICIÓN OBLIGATORIO — SESIÓN ACTIVA:`,
+        `Estos hooks ya fueron generados en esta sesión. PROHIBIDO repetir su estructura, apertura, ángulo o patrón:`,
+        sessionHooksTracker.hooks.map(h => `  ✗ ${h}`).join('\n'),
+        ``,
+        `Regla: cada nuevo hook DEBE usar un ángulo distinto a TODOS los anteriores.`,
+        anguloSugerido ? `Ángulo sugerido para este turno: "${anguloSugerido}" — úsalo como punto de partida.` : '',
+      ].filter(Boolean).join('\n')
     : '';
 
-  // Construir prompt: reglas primero, ejemplos después (para que las reglas tengan más peso)
+  // Construir prompt: anti-repetición ANTES de ejemplos (mayor peso)
   const modoConfig = {
     completo: {
       rules: `${hooksPrompt}\n${pr.estructura}`,
@@ -1591,14 +1701,14 @@ async function generarGuion() {
   };
   const mc = modoConfig[modo];
 
-  // Sistema: identidad → sector → reglas del sector → reglas de hook/estructura → ejemplos → hooks ya generados
+  // Sistema: identidad → anti-repetición (PRIMERO) → sector → reglas → ejemplos → formato
   const systemPrompt = [
     pr.identidad,
+    sessionHooksCtx || '',   // <-- ANTES de ejemplos para que tenga mayor peso
     `CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}`,
     sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : '',
     mc.rules || '',
     ejemplos || '',
-    sessionHooksCtx || '',
     `RESPONDE SOLO con este JSON sin markdown ni texto extra:\n${mc.jsonFormat}`,
   ].filter(Boolean).join('\n\n');
 
@@ -1620,6 +1730,7 @@ Tema: ${tema}
 ${notas?'Notas: '+notas:''}
 ${hookRef?'Hook/contexto de referencia: '+hookRef:''}
 ${modo==='completo'?'Elementos: '+elementos:''}
+${hooksUsados > 0 ? `\nRECORDATORIO ANTI-REPETICIÓN: El hook que generes DEBE ser diferente en estructura y ángulo a los ${hooksUsados} hook(s) previos de esta sesión listados arriba.${anguloSugerido ? ` Usa el ángulo "${anguloSugerido}".` : ''}` : ''}
 
 Solo el JSON.`}]
       })
@@ -1815,30 +1926,38 @@ function openFirstAccess() {
 function closeFirstAccess() {
   document.getElementById('first-access-modal').style.display = 'none';
 }
-function doFirstAccess() {
-  const pw = document.getElementById('first-access-pw').value;
-  if (pw !== getAdminPw()) {
-    document.getElementById('first-access-error').textContent = 'Contraseña incorrecta';
-    document.getElementById('first-access-pw').value = '';
-    document.getElementById('first-access-pw').focus();
-    return;
-  }
-  closeFirstAccess();
-  isAdminSession = true;
-  // Entrar al app en modo admin (sin sesión de empleado)
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
-  document.getElementById('admin-btn').classList.add('show');
-  // Cargar local inmediatamente para que no quede vacío
-  loadSectorSelect();
-  loadDuracionSelect();
-  updatePendingBadge();
-  // Luego actualizar desde KV (async)
-  loadRemoteConfig();
-  const sessionEnd = Date.now() + SESSION_MS;
-  startSessionTimer(sessionEnd);
-  // Abrir panel admin directamente
-  openAdmin();
+async function doFirstAccess() {
+  const pw  = document.getElementById('first-access-pw').value;
+  const btn = document.querySelector('#first-access-modal .btn-primary');
+  const setLoading = on => { if (btn) { btn.disabled = on; btn.textContent = on ? '...' : 'Entrar'; } };
+  setLoading(true);
+  try {
+    const res  = await fetch(WORKER + '/auth/verify-admin', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    if (!data.ok) {
+      document.getElementById('first-access-error').textContent = 'Contraseña incorrecta';
+      document.getElementById('first-access-pw').value = '';
+      document.getElementById('first-access-pw').focus();
+      return;
+    }
+    closeFirstAccess();
+    isAdminSession = true;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('admin-btn').classList.add('show');
+    loadSectorSelect();
+    loadDuracionSelect();
+    updatePendingBadge();
+    loadRemoteConfig();
+    startSessionTimer(Date.now() + SESSION_MS);
+    openAdmin();
+  } catch(e) {
+    document.getElementById('first-access-error').textContent = 'Error: ' + e.message;
+  } finally { setLoading(false); }
 }
 
 function toggleHistory() {
