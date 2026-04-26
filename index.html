@@ -347,6 +347,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           </div>
         </div>
         <div id="out-content"></div>
+        <div id="regen-btns" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
       </div>
     </div>
   </div>
@@ -395,6 +396,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <button class="admin-tab" onclick="switchTab('duraciones',this)">Duraciones</button>
     <button class="admin-tab" onclick="switchTab('prompt',this)">Prompt Studio</button>
     <button class="admin-tab" onclick="switchTab('reels',this)">Reels Ref.</button>
+    <button class="admin-tab" onclick="switchTab('basedatos',this)">Base de Datos</button>
     <button class="admin-tab" onclick="switchTab('config',this)">Config</button>
   </div>
   <div class="admin-body">
@@ -534,21 +536,24 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       </div>
       <button class="btn btn-ghost" style="width:100%" onclick="changeAdminPw()">Actualizar contraseña</button>
 
-      <div class="divider"></div>
-      <h3>Base de aprendizaje</h3>
-      <div id="approved-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+    </div>
+
+    <!-- BASE DE DATOS -->
+    <div class="admin-section" id="tab-basedatos">
+      <h3>Guiones Aprobados</h3>
+      <div id="approved-count" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <select id="approved-sector-filter" style="flex:1" onchange="loadApprovedList()">
           <option value="">Todos los sectores</option>
         </select>
         <button class="btn btn-ghost btn-sm" onclick="loadApprovedList()">↻ Cargar</button>
       </div>
-      <div id="approved-list" style="font-size:12px;color:var(--muted);margin-bottom:12px">Presiona ↻ Cargar para ver los guiones aprobados.</div>
+      <div id="approved-list" style="font-size:12px;color:var(--muted);margin-bottom:12px">Presiona ↻ Cargar para ver los guiones.</div>
       <button class="btn btn-red" style="width:100%;font-size:12px" onclick="clearApproved()">Limpiar todos los guiones aprobados</button>
 
       <div class="divider"></div>
-      <h3>Estilos a evitar</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Revisa y elimina entradas marcadas por error.</p>
+      <h3>Estilos a Evitar</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Entradas marcadas para no repetir. Haz click en una para ver, editar o eliminar.</p>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <select id="avoid-sector-filter" style="flex:1" onchange="loadAvoidStylesList()">
           <option value="">Todos los sectores</option>
@@ -577,6 +582,34 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       <button class="btn btn-red" style="flex:1" onclick="rejectGuionModal()">✕ Rechazar</button>
       <button class="btn" style="flex:1;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidStyleModal()">⚠ Evitar estilo</button>
       <button class="btn btn-green" style="flex:1" onclick="approveGuionModal()">✓ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL (ver / editar / eliminar desde BD) -->
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:400;align-items:center;justify-content:center;padding:24px">
+  <div class="review-card" style="max-width:680px;width:100%">
+    <div class="review-card-header">
+      <div>
+        <h3 id="dm-title">Script</h3>
+        <div class="review-card-meta" id="dm-meta"></div>
+      </div>
+      <button class="btn btn-icon" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="review-card-body" id="dm-body">
+      <div id="dm-view"></div>
+      <div id="dm-edit" style="display:none">
+        <div class="field"><label>Hook</label><input type="text" id="dm-hook"></div>
+        <div class="field" id="dm-f-apellido"><label>Segundo Golpe</label><input type="text" id="dm-hook-apellido"></div>
+        <div class="field" id="dm-f-cuerpo"><label>Desarrollo</label><textarea id="dm-cuerpo" rows="6"></textarea></div>
+        <div class="field"><label>CTA</label><input type="text" id="dm-cta"></div>
+      </div>
+    </div>
+    <div class="review-card-footer" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-ghost" onclick="closeDetailModal()">Cerrar</button>
+      <button class="btn btn-red" onclick="deleteFromDetailModal()">🗑 Eliminar</button>
+      <button class="btn btn-ghost" id="dm-edit-btn" onclick="toggleDetailEdit()">✏ Editar</button>
+      <button class="btn btn-green" id="dm-save-btn" style="display:none" onclick="saveDetailEdit()">💾 Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -805,10 +838,11 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'cola')   loadQueueList();
-  if (tab === 'prompt') loadPromptStudio();
-  if (tab === 'reels')  { loadReelSectorSel(); loadReelsList(); }
-  if (tab === 'config') { loadAvoidSectorFilter(); loadApprovedSectorFilter(); }
+  if (tab === 'cola')      loadQueueList();
+  if (tab === 'prompt')   loadPromptStudio();
+  if (tab === 'reels')    { loadReelSectorSel(); loadReelsList(); }
+  if (tab === 'basedatos'){ loadApprovedSectorFilter(); loadAvoidSectorFilter(); loadApprovedList(); loadAvoidStylesList(); }
+  if (tab === 'config')   {}
 }
 
 // ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
@@ -1145,13 +1179,10 @@ async function loadAvoidStylesList() {
       return;
     }
     el.innerHTML = styles.map(s => `
-      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'}</div>
-          <div style="color:var(--text);font-size:13px">${esc(s.hook||'—')}</div>
-          ${s.cuerpo ? `<div style="color:var(--muted);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.cuerpo.substring(0,90))}...</div>` : ''}
-        </div>
-        <button class="btn btn-red btn-sm" onclick="deleteAvoidStyle(${s.id})" title="Eliminar" style="flex-shrink:0;padding:6px 10px">🗑</button>
+      <div class="queue-item" style="cursor:pointer;background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)" onclick="openDetailModal('avoid', ${JSON.stringify(JSON.stringify(s))})">
+        <div class="queue-item-meta">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'}</div>
+        <div class="queue-item-hook" style="color:#F59E0B">${esc(s.hook||'—')}</div>
+        ${s.cuerpo ? `<div class="queue-item-snippet">${esc(s.cuerpo.substring(0,100))}...</div>` : ''}
       </div>
     `).join('');
   } catch(e) {
@@ -1210,14 +1241,11 @@ async function loadApprovedList() {
       return;
     }
     el.innerHTML = scripts.map(s => `
-      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'} · ${esc(s.cliente||'—')}</div>
-          <div style="color:var(--text);font-size:13px">${esc(s.hook||'—')}</div>
-          ${s.hook_apellido ? `<div style="color:var(--accent-l);font-size:12px;margin-top:2px">${esc(s.hook_apellido)}</div>` : ''}
-          ${s.cuerpo ? `<div style="color:var(--muted);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.cuerpo.substring(0,90))}...</div>` : ''}
-        </div>
-        <button class="btn btn-red btn-sm" onclick="deleteApprovedScript(${s.id})" title="Eliminar" style="flex-shrink:0;padding:6px 10px">🗑</button>
+      <div class="queue-item" style="cursor:pointer" onclick="openDetailModal('approved', ${JSON.stringify(JSON.stringify(s))})">
+        <div class="queue-item-meta">${esc(s.sector)} · ${s.tipo==='numeros'?'Números':'Marca'} · ${esc(s.cliente||'—')}</div>
+        <div class="queue-item-hook">${esc(s.hook||'—')}</div>
+        ${s.hook_apellido ? `<div style="color:var(--accent-l);font-size:12px;margin-top:2px;font-style:italic">${esc(s.hook_apellido)}</div>` : ''}
+        ${s.cuerpo ? `<div class="queue-item-snippet">${esc(s.cuerpo.substring(0,100))}...</div>` : ''}
       </div>
     `).join('');
   } catch(e) {
@@ -1225,16 +1253,175 @@ async function loadApprovedList() {
   }
 }
 async function deleteApprovedScript(id) {
-  if (!confirm('¿Eliminar este guión de la base de aprendizaje?')) return;
   try {
-    await fetch(WORKER + '/approved', {
-      method: 'DELETE',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ id })
-    });
+    await fetch(WORKER + '/approved', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
     showToast('Guión eliminado');
     loadApprovedList();
   } catch(e) { showToast('Error al eliminar'); }
+}
+
+// ── DETAIL MODAL (ver / editar / eliminar desde BD) ────────────────────
+let currentDetailType = '';
+let currentDetailId   = null;
+let currentDetailItem = null;
+
+function openDetailModal(type, itemJson) {
+  const item = typeof itemJson === 'string' ? JSON.parse(itemJson) : itemJson;
+  currentDetailType = type;
+  currentDetailId   = item.id;
+  currentDetailItem = item;
+  document.getElementById('dm-title').textContent = item.cliente || item.tema || (item.hook||'').substring(0,50) || 'Script';
+  document.getElementById('dm-meta').textContent  = `${item.sector||''} · ${item.tipo==='numeros'?'Números':'Marca'}${item.tema?' · '+item.tema:''}`;
+  document.getElementById('dm-view').innerHTML    = buildScriptHtml(
+    { hook: item.hook, hook_apellido: item.hook_apellido, cuerpo: item.cuerpo, cta: item.cta },
+    item.tipo, item.modo || 'completo'
+  );
+  document.getElementById('dm-view').style.display = '';
+  document.getElementById('dm-edit').style.display = 'none';
+  document.getElementById('dm-edit-btn').textContent = '✏ Editar';
+  document.getElementById('dm-save-btn').style.display = 'none';
+  document.getElementById('detail-modal').style.display = 'flex';
+}
+function closeDetailModal() {
+  document.getElementById('detail-modal').style.display = 'none';
+}
+function toggleDetailEdit() {
+  const editing = document.getElementById('dm-edit').style.display !== 'none';
+  if (!editing) {
+    // Entrar a modo edición
+    const i = currentDetailItem;
+    document.getElementById('dm-hook').value          = i.hook          || '';
+    document.getElementById('dm-hook-apellido').value = i.hook_apellido || '';
+    document.getElementById('dm-cuerpo').value        = i.cuerpo        || '';
+    document.getElementById('dm-cta').value           = i.cta           || '';
+    document.getElementById('dm-f-apellido').style.display = i.tipo==='numeros' ? '' : 'none';
+    document.getElementById('dm-f-cuerpo').style.display   = currentDetailType==='avoid' && !i.cuerpo ? 'none' : '';
+    document.getElementById('dm-view').style.display = 'none';
+    document.getElementById('dm-edit').style.display = '';
+    document.getElementById('dm-edit-btn').textContent     = '✕ Cancelar';
+    document.getElementById('dm-save-btn').style.display   = '';
+  } else {
+    document.getElementById('dm-view').style.display = '';
+    document.getElementById('dm-edit').style.display = 'none';
+    document.getElementById('dm-edit-btn').textContent   = '✏ Editar';
+    document.getElementById('dm-save-btn').style.display = 'none';
+  }
+}
+async function saveDetailEdit() {
+  const updates = {
+    hook:          document.getElementById('dm-hook').value.trim(),
+    hook_apellido: document.getElementById('dm-hook-apellido').value.trim(),
+    cuerpo:        document.getElementById('dm-cuerpo').value.trim(),
+    cta:           document.getElementById('dm-cta').value.trim(),
+  };
+  const endpoint = currentDetailType === 'approved' ? '/approved' : '/avoid';
+  try {
+    const res  = await fetch(WORKER + endpoint, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id: currentDetailId, ...updates })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error al guardar');
+    Object.assign(currentDetailItem, updates);
+    document.getElementById('dm-view').innerHTML = buildScriptHtml(
+      { hook: updates.hook, hook_apellido: updates.hook_apellido, cuerpo: updates.cuerpo, cta: updates.cta },
+      currentDetailItem.tipo, currentDetailItem.modo || 'completo'
+    );
+    toggleDetailEdit();
+    showToast('✓ Cambios guardados en la base de datos');
+    if (currentDetailType === 'approved') loadApprovedList(); else loadAvoidStylesList();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function deleteFromDetailModal() {
+  if (!confirm('¿Eliminar este registro de la base de datos?')) return;
+  if (currentDetailType === 'approved') await deleteApprovedScript(currentDetailId);
+  else await deleteAvoidStyle(currentDetailId);
+  closeDetailModal();
+}
+
+// ── REGENERAR PARTES ──────────────────────────────────────────────────
+function renderRegenButtons(modo, tipo) {
+  const c = document.getElementById('regen-btns');
+  if (!c) return;
+  const btns = [];
+  if (modo === 'completo') {
+    btns.push({label:'🔄 Hook', parte:'hook'});
+    if (tipo === 'numeros') btns.push({label:'🔄 2do Golpe', parte:'hook_apellido'});
+    btns.push({label:'🔄 Desarrollo', parte:'cuerpo'});
+    btns.push({label:'🔄 CTA', parte:'cta'});
+  } else if (modo === 'hook') {
+    btns.push({label:'🔄 Hook', parte:'hook'});
+    if (tipo === 'numeros') btns.push({label:'🔄 2do Golpe', parte:'hook_apellido'});
+  } else if (modo === 'desarrollo') {
+    btns.push({label:'🔄 Desarrollo', parte:'cuerpo'});
+  } else if (modo === 'cta') {
+    btns.push({label:'🔄 CTA', parte:'cta'});
+  }
+  if (!btns.length) { c.style.display = 'none'; return; }
+  c.innerHTML = btns.map(b =>
+    `<button id="regen-btn-${b.parte}" class="btn btn-ghost btn-sm" onclick="regenerarParte('${b.parte}')">${b.label}</button>`
+  ).join('');
+  c.style.display = 'flex';
+}
+
+async function regenerarParte(parte) {
+  if (!lastGuionData) return;
+  const { guion: g, modo, tipo, sector, plataforma, cliente, tema } = lastGuionData;
+  const pr = getPromptRules();
+  const hooksPrompt  = tipo === 'numeros' ? pr.hookNumeros : pr.hookMarca;
+  const ctxAll       = store.get('ryvar_sector_ctx_all') || {};
+  const sectorLabel  = getSectors().find(s=>s.value===sector)?.label || sector;
+  const sectorCtx    = ctxAll[sector] || `Sector: ${sectorLabel}.`;
+  const sectorRules  = (store.get('ryvar_sector_rules') || {})[sector] || '';
+
+  const btn = document.getElementById(`regen-btn-${parte}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ ...'; }
+
+  const cfgs = {
+    hook: {
+      system: [pr.identidad, `CONTEXTO DEL SECTOR: ${sectorCtx}`, sectorRules ? `REGLAS: ${sectorRules}` : '', hooksPrompt].filter(Boolean).join('\n\n'),
+      prompt: `Regenera SOLO el hook (0-3s). Tipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}\nCliente: ${cliente||'—'}\nHook actual a superar: "${g.hook}"\nResponde SOLO: {"hook":"..."}`,
+    },
+    hook_apellido: {
+      system: [pr.identidad, hooksPrompt].filter(Boolean).join('\n\n'),
+      prompt: `Regenera SOLO el segundo golpe (APELLIDO).\nHook: "${g.hook}"\nEscala sin repetir el hook. Tema: ${tema}\nResponde SOLO: {"hook_apellido":"..."}`,
+    },
+    cuerpo: {
+      system: [pr.identidad, `CONTEXTO: ${sectorCtx}`, sectorRules ? `REGLAS: ${sectorRules}` : '', pr.estructura].filter(Boolean).join('\n\n'),
+      prompt: `Regenera SOLO el desarrollo/cuerpo. El hook ya está escrito — continúa desde él.\nHook: "${g.hook}${g.hook_apellido?' / '+g.hook_apellido:''}"\nTema: ${tema}\nResponde SOLO: {"cuerpo":"..."}`,
+    },
+    cta: {
+      system: pr.identidad,
+      prompt: `Regenera SOLO el CTA. Coherente con el guión.\nHook: "${g.hook}"\nTema: ${tema} · Sector: ${sectorLabel}\nResponde SOLO: {"cta":"..."}`,
+    },
+  };
+  const cfg = cfgs[parte];
+  if (!cfg) { if (btn) { btn.disabled = false; } return; }
+
+  try {
+    const res  = await fetch(WORKER, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:400, system: cfg.system, messages:[{role:'user', content: cfg.prompt}] })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error?.message || 'Error API');
+    const raw  = data.content?.find(b=>b.type==='text')?.text || '';
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if (parsed[parte] !== undefined) {
+      lastGuionData.guion[parte] = parsed[parte];
+      versionSelected = false;
+      const durLabel = getDuraciones().find(d=>d.value===document.getElementById('duracion').value)?.label || '';
+      renderGuion(lastGuionData.guion, cliente, plataforma, sectorLabel, tipo, durLabel, modo);
+      const labels = {hook:'Hook', hook_apellido:'2do Golpe', cuerpo:'Desarrollo', cta:'CTA'};
+      showToast(`✓ ${labels[parte]||parte} regenerado`);
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+  finally {
+    const b = document.getElementById(`regen-btn-${parte}`);
+    if (b) { b.disabled = false; b.textContent = {hook:'🔄 Hook', hook_apellido:'🔄 2do Golpe', cuerpo:'🔄 Desarrollo', cta:'🔄 CTA'}[parte] || '🔄'; }
+  }
 }
 
 // ─── GENERADOR ────────────────────────────────────────────────────────────────
@@ -1531,6 +1718,7 @@ function renderGuion(g, cliente, plataforma, sector, tipo, durLabel, modo='compl
     <span class="chip">${esc(plataforma)}</span>
     ${durChip}`;
   document.getElementById('out-content').innerHTML = buildScriptHtml(g, tipo, modo);
+  renderRegenButtons(modo, tipo);
   out.scrollIntoView({behavior:'smooth'});
 }
 
