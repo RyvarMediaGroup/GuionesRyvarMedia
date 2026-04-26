@@ -1194,9 +1194,17 @@ async function loadApprovedList() {
   try {
     const params = sector ? `?sector=${encodeURIComponent(sector)}` : '';
     const res = await fetch(`${WORKER}/approved${params}`);
-    const { scripts = [], total = 0 } = await res.json();
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      el.innerHTML = `<div style="color:var(--red);font-size:12px">⚠ Error del Worker: ${data.error || res.status} — redespliega worker.js</div>`;
+      return;
+    }
+
+    const { scripts = [], total = 0 } = data;
     const countEl = document.getElementById('approved-count');
     if (countEl) countEl.textContent = `${total} guión${total!==1?'es':''} aprobado${total!==1?'s':''} en base de datos`;
+
     if (!scripts.length) {
       el.innerHTML = '<div style="color:var(--muted)">No hay guiones aprobados aún.</div>';
       return;
@@ -1213,7 +1221,7 @@ async function loadApprovedList() {
       </div>
     `).join('');
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--red);font-size:12px">Error al cargar. Verifica que el Worker esté actualizado.</div>';
+    el.innerHTML = `<div style="color:var(--red);font-size:12px">⚠ No se pudo conectar con el Worker: ${e.message}</div>`;
   }
 }
 async function deleteApprovedScript(id) {
