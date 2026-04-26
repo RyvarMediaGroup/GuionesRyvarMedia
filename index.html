@@ -342,8 +342,8 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           <div class="script-meta" id="out-chips"></div>
           <div style="display:flex;gap:8px;flex-shrink:0">
             <button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copiar</button>
-            <button class="btn btn-ghost btn-sm" onclick="avoidStyle()" title="Marcar este estilo para que la IA lo evite en el futuro" style="color:#F59E0B;border-color:rgba(245,158,11,.3)">⚠ Evitar estilo</button>
-            <button class="btn btn-ghost btn-sm" onclick="sendToReview()">📤 Revisión</button>
+            <button id="btn-discard-version" class="btn btn-ghost btn-sm" onclick="discardVersion()" style="color:var(--muted)">✕ Descartar</button>
+            <button id="btn-select-version" class="btn btn-primary btn-sm" onclick="selectVersion()">✓ Versión seleccionada</button>
           </div>
         </div>
         <div id="out-content"></div>
@@ -394,6 +394,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <button class="admin-tab" onclick="switchTab('sectores',this)">Sectores</button>
     <button class="admin-tab" onclick="switchTab('duraciones',this)">Duraciones</button>
     <button class="admin-tab" onclick="switchTab('prompt',this)">Prompt Studio</button>
+    <button class="admin-tab" onclick="switchTab('reels',this)">Reels Ref.</button>
     <button class="admin-tab" onclick="switchTab('config',this)">Config</button>
   </div>
   <div class="admin-body">
@@ -474,6 +475,33 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       </div>
     </div>
 
+    <!-- REELS DE REFERENCIA -->
+    <div class="admin-section" id="tab-reels">
+      <h3>Reels de Referencia</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Agrega reels de Instagram como material de aprendizaje. La IA los usará como contexto al generar guiones para ese sector.</p>
+      <div class="field">
+        <label>Sector</label>
+        <select id="reel-sector"><option value="">— Selecciona sector —</option></select>
+      </div>
+      <div class="field">
+        <label>URL del Reel (opcional)</label>
+        <input type="url" id="reel-url" placeholder="https://www.instagram.com/reel/...">
+      </div>
+      <div class="field">
+        <label>Transcripción del guión</label>
+        <textarea id="reel-transcript" rows="5" placeholder="Transcribe el guión hablado del reel aquí..."></textarea>
+      </div>
+      <div class="field">
+        <label>¿Qué hace bien este reel? (notas)</label>
+        <input type="text" id="reel-notes" placeholder="Ej: Hook directo, transición perfecta al desarrollo...">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveReel()">💾 Guardar Reel</button>
+      <div id="reel-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
+      <div class="divider"></div>
+      <h3>Reels guardados</h3>
+      <div id="reels-list" style="font-size:12px;color:var(--muted);margin-top:8px">Cargando...</div>
+    </div>
+
     <!-- CONFIG -->
     <div class="admin-section" id="tab-config">
       <h3>Acceso de empleados</h3>
@@ -529,6 +557,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
     <div class="review-card-footer">
       <button class="btn btn-ghost" style="flex:1" onclick="closeReviewModal()">Cerrar</button>
       <button class="btn btn-red" style="flex:1" onclick="rejectGuionModal()">✕ Rechazar</button>
+      <button class="btn" style="flex:1;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidStyleModal()">⚠ Evitar estilo</button>
       <button class="btn btn-green" style="flex:1" onclick="approveGuionModal()">✓ Aprobar</button>
     </div>
   </div>
@@ -663,14 +692,26 @@ function doLogin() {
   }
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
+  // Cargar local inmediatamente para que no quede vacío
+  loadSectorSelect();
+  loadDuracionSelect();
+  updatePendingBadge();
+  // Luego actualizar desde KV (async)
   loadRemoteConfig();
   const sessionEnd = now + SESSION_MS;
   startSessionTimer(sessionEnd);
 }
 
 function doLogout() {
+  // Si hay un guión generado pero no enviado ni descartado, enviarlo automáticamente
+  if (lastGuionData && !versionSelected && !versionDiscarded) {
+    pushVersionToPending(lastGuionData).catch(()=>{});
+  }
   clearInterval(sessionTimer);
   isAdminSession = false;
+  lastGuionData = null;
+  versionSelected = false;
+  versionDiscarded = false;
   sessionHistory = [];
   renderHistory();
   document.getElementById('login-screen').classList.remove('hidden');
@@ -747,6 +788,7 @@ function switchTab(tab, btn) {
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'cola')   loadQueueList();
   if (tab === 'prompt') loadPromptStudio();
+  if (tab === 'reels')  { loadReelSectorSel(); loadReelsList(); }
 }
 
 // ─── PIN GENERATION (FIX: guardar expiry explícito) ──────────────────────────
@@ -929,6 +971,7 @@ function loadQueueList() {
       <div class="queue-actions" onclick="event.stopPropagation()">
         <button class="btn btn-green btn-sm" style="flex:1" onclick="approveGuion(${idx})">✓ Aprobar</button>
         <button class="btn btn-red btn-sm" style="flex:1" onclick="rejectGuion(${idx})">✗ Rechazar</button>
+        <button class="btn btn-sm" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#F59E0B" onclick="avoidGuion(${idx})">⚠</button>
       </div>`;
     listEl.appendChild(div);
   });
@@ -1014,17 +1057,83 @@ function rejectGuionModal() {
   rejectGuion(currentReviewIdx);
   closeReviewModal();
 }
+async function avoidStyleModal() {
+  if (currentReviewIdx < 0) return;
+  await avoidGuion(currentReviewIdx);
+  closeReviewModal();
+}
+async function avoidGuion(idx) {
+  const pending = store.get('ryvar_pending') || [];
+  const item = pending[idx];
+  if (!item) return;
+  // Guardar en lista de estilos a evitar
+  const avoid = store.get('ryvar_avoid_styles') || [];
+  if (!avoid.find(a => a.generatedAt === item.generatedAt)) {
+    avoid.push({...item, avoidedAt: Date.now()});
+    if (avoid.length > 150) avoid.splice(0, avoid.length - 150);
+    store.set('ryvar_avoid_styles', avoid);
+  }
+  try {
+    await fetch(WORKER + '/avoid', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({...item, avoidedAt: Date.now()})
+    });
+  } catch(e) { console.warn('Avoid D1 sync failed, saved locally'); }
+  // Eliminar de la cola de pendientes
+  pending.splice(idx, 1);
+  store.set('ryvar_pending', pending);
+  syncPendingToKV('remove', item.generatedAt).catch(()=>{});
+  showToast('⚠ Estilo marcado para evitar');
+  loadQueueList();
+}
 
 // ─── GENERADOR ────────────────────────────────────────────────────────────────
 function updateCount(el, id) { document.getElementById(id).textContent = el.value.length; }
 
 let lastGuionData = null;
+let versionSelected = false;
+let versionDiscarded = false;
 let sessionHistory = [];
+
+function selectVersion() {
+  if (!lastGuionData) return;
+  if (versionSelected) { showToast('Ya enviada para revisión'); return; }
+  pushVersionToPending(lastGuionData);
+  versionSelected = true;
+  const btnSel = document.getElementById('btn-select-version');
+  if (btnSel) { btnSel.textContent = '✓ Enviado para revisión'; btnSel.disabled = true; }
+  showToast('Guión enviado para revisión ✓');
+}
+
+function discardVersion() {
+  if (!lastGuionData) return;
+  lastGuionData = null;
+  versionSelected = false;
+  versionDiscarded = true;
+  document.getElementById('script-output').classList.remove('visible');
+  document.getElementById('empty-state').style.display = '';
+  showToast('Versión descartada');
+}
+
+async function pushVersionToPending(data) {
+  const pending = store.get('ryvar_pending') || [];
+  // Deduplicar: remover versión previa del mismo tema+sector+tipo
+  const duplicates = pending.filter(p => p.tema === data.tema && p.sector === data.sector && p.tipo === data.tipo);
+  const filtered = pending.filter(p => !(p.tema === data.tema && p.sector === data.sector && p.tipo === data.tipo));
+  filtered.push(data);
+  store.set('ryvar_pending', filtered);
+  updatePendingBadge();
+  try {
+    for (const d of duplicates) await syncPendingToKV('remove', d.generatedAt);
+    await syncPendingToKV('add', data);
+  } catch(e) { console.warn('KV sync pending failed'); }
+}
 
 async function getExamples(sector, tipo) {
   try {
     const res = await fetch(`${WORKER}/examples?sector=${encodeURIComponent(sector)}&tipo=${encodeURIComponent(tipo)}`);
-    const { examples=[], profile=null, avoid=[] } = await res.json();
+    const { examples=[], profile=null, avoid=[], reels=[] } = await res.json();
     let out = '';
     if (profile) out += `PERFIL DE ESTILO APRENDIDO (patrones de tus guiones aprobados):\n${profile}\n\n`;
     if (examples.length) {
@@ -1033,7 +1142,12 @@ async function getExamples(sector, tipo) {
         `• Hook: ${e.hook}${e.hook_apellido?' / Segundo: '+e.hook_apellido:''}\n  Desarrollo: ${(e.cuerpo||'').substring(0,200)}\n  CTA: ${e.cta||''}`
       ).join('\n\n');
     }
-    // Avoid styles desde D1 (reemplaza el fallback local)
+    if (reels.length) {
+      out += `\n\nREELS DE REFERENCIA (aprendizaje adicional de estilo):\n`;
+      out += reels.map(r =>
+        `• Guión: ${(r.transcript||'').substring(0,300)}${r.notes?' [Nota: '+r.notes+']':''}`
+      ).join('\n\n');
+    }
     if (avoid.length) {
       out += `\n\nESTILOS A EVITAR (estos no funcionaron — no usar estos patrones):\n`;
       out += avoid.map(a => `• Hook a evitar: ${a.hook}`).join('\n');
@@ -1100,37 +1214,42 @@ async function generarGuion() {
   // Obtener ejemplos de D1 mientras se muestra el loader
   const ejemplos = await getExamples(sector, tipo);
 
-  // Construir prompt y formato JSON según el modo
-  const ctxBase = `${pr.identidad}
-CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
-${sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : ''}
-${ejemplos || ''}`;
-
+  // Construir prompt: reglas primero, ejemplos después (para que las reglas tengan más peso)
   const modoConfig = {
     completo: {
-      systemExtra: `${hooksPrompt}\n${pr.estructura}`,
+      rules: `${hooksPrompt}\n${pr.estructura}`,
       jsonFormat:  `{"hook":"texto del hook","hook_apellido":"segundo golpe (solo tipo números, sino vacío)","cuerpo":"desarrollo completo listo para leer en cámara","cta":"llamado a la acción exacto","filmacion":["sugerencia 1","sugerencia 2","sugerencia 3"],"edicion":["sugerencia 1","sugerencia 2","sugerencia 3"],"duracion_estimada":"X-Y segundos"}`,
       instruccion: 'Genera el guión completo.',
     },
     hook: {
-      systemExtra: `${hooksPrompt}`,
+      rules: `${hooksPrompt}`,
       jsonFormat:  tipo==='numeros'
         ? `{"hook":"primer golpe — detiene el scroll en 0-3s","hook_apellido":"segundo golpe que escala sin repetir"}`
         : `{"hook":"hook que detiene el scroll en 0-3s","hook_apellido":""}`,
       instruccion: `Genera SOLO el hook${tipo==='numeros'?' (primer golpe + segundo golpe)':''}.`,
     },
     desarrollo: {
-      systemExtra: pr.estructura,
+      rules: pr.estructura,
       jsonFormat:  `{"cuerpo":"desarrollo completo listo para leer en cámara, sin hook ni CTA"}`,
       instruccion: `Genera SOLO el desarrollo/cuerpo del guión.${hookRef?' El hook ya está escrito — continúa desde él sin repetirlo.':''}`,
     },
     cta: {
-      systemExtra: '',
+      rules: '',
       jsonFormat:  `{"cta":"llamado a la acción exacto y poderoso"}`,
       instruccion: `Genera SOLO el CTA (llamado a la acción).${hookRef?' El contexto del guión es el siguiente hook/desarrollo — el CTA debe ser coherente con él.':''}`,
     },
   };
   const mc = modoConfig[modo];
+
+  // Sistema: identidad → sector → reglas del sector → reglas de hook/estructura → ejemplos (al final)
+  const systemPrompt = [
+    pr.identidad,
+    `CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}`,
+    sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : '',
+    mc.rules || '',
+    ejemplos || '',
+    `RESPONDE SOLO con este JSON sin markdown ni texto extra:\n${mc.jsonFormat}`,
+  ].filter(Boolean).join('\n\n');
 
   try {
     const res = await fetch(WORKER, {
@@ -1139,10 +1258,7 @@ ${ejemplos || ''}`;
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: modo==='completo' ? 2000 : 600,
-        system: `${ctxBase}
-${mc.systemExtra}
-RESPONDE SOLO con este JSON sin markdown ni texto extra:
-${mc.jsonFormat}`,
+        system: systemPrompt,
         messages:[{role:'user', content:`${mc.instruccion}
 Cliente: ${cliente||'Sin especificar'}
 Sector: ${sectorLabel}
@@ -1168,12 +1284,14 @@ Solo el JSON.`}]
     catch { g = {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
 
     lastGuionData = {guion:g, modo, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
+    versionSelected = false;
+    versionDiscarded = false;
 
-    const pending = store.get('ryvar_pending') || [];
-    pending.push(lastGuionData);
-    store.set('ryvar_pending', pending);
-    updatePendingBadge();
-    syncPendingToKV('add', lastGuionData).catch(()=>{});
+    // Reset botones de versión
+    const btnSel = document.getElementById('btn-select-version');
+    const btnDisc = document.getElementById('btn-discard-version');
+    if (btnSel) { btnSel.textContent = '✓ Versión seleccionada'; btnSel.disabled = false; }
+    if (btnDisc) { btnDisc.disabled = false; }
 
     renderGuion(g, cliente, platLabel, sectorLabel, tipo, durLabel, modo);
     addToHistory(lastGuionData);
@@ -1351,6 +1469,11 @@ function doFirstAccess() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   document.getElementById('admin-btn').classList.add('show');
+  // Cargar local inmediatamente para que no quede vacío
+  loadSectorSelect();
+  loadDuracionSelect();
+  updatePendingBadge();
+  // Luego actualizar desde KV (async)
   loadRemoteConfig();
   const sessionEnd = Date.now() + SESSION_MS;
   startSessionTimer(sessionEnd);
@@ -1474,26 +1597,6 @@ async function savePromptRules() {
   setTimeout(() => st.textContent = '', 4000);
 }
 
-// ── EVITAR ESTILO ─────────────────────────────────────────────────────
-async function avoidStyle() {
-  if (!lastGuionData) return;
-  const avoid = store.get('ryvar_avoid_styles') || [];
-  // Evitar duplicados
-  if (avoid.find(a => a.generatedAt === lastGuionData.generatedAt)) {
-    showToast('Ya marcado para evitar'); return;
-  }
-  avoid.push({...lastGuionData, avoidedAt: Date.now()});
-  if (avoid.length > 150) avoid.splice(0, avoid.length - 150);
-  store.set('ryvar_avoid_styles', avoid);
-  try {
-    await fetch(WORKER + '/avoid', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({...lastGuionData, avoidedAt: Date.now()})
-    });
-  } catch(e) { console.warn('Avoid D1 sync failed, saved locally'); }
-  showToast('⚠ Estilo marcado para evitar');
-}
 
 // ── REGLAS POR SECTOR ─────────────────────────────────────────────────
 function loadSectorRuleSel() {
@@ -1535,6 +1638,67 @@ async function saveSectorRule() {
     st.textContent = 'Guardado localmente (sin conexión)';
   }
   setTimeout(() => st.textContent = '', 3500);
+}
+
+// ── REELS DE REFERENCIA ───────────────────────────────────────────────
+function loadReelSectorSel() {
+  const sel = document.getElementById('reel-sector');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona sector —</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+async function saveReel() {
+  const sector     = document.getElementById('reel-sector').value;
+  const url        = document.getElementById('reel-url').value.trim();
+  const transcript = document.getElementById('reel-transcript').value.trim();
+  const notes      = document.getElementById('reel-notes').value.trim();
+  const st         = document.getElementById('reel-status');
+  if (!sector || !transcript) {
+    st.style.color = 'var(--red)';
+    st.textContent = 'El sector y la transcripción son obligatorios';
+    setTimeout(() => st.textContent = '', 3000);
+    return;
+  }
+  try {
+    await fetch(WORKER + '/reference-reel', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sector, url, transcript, notes, addedAt: Date.now() })
+    });
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Reel guardado en base de datos';
+    document.getElementById('reel-url').value = '';
+    document.getElementById('reel-transcript').value = '';
+    document.getElementById('reel-notes').value = '';
+    loadReelsList();
+  } catch(e) {
+    st.style.color = 'var(--red)';
+    st.textContent = 'Error al guardar reel: ' + e.message;
+  }
+  setTimeout(() => st.textContent = '', 4000);
+}
+async function loadReelsList() {
+  const el = document.getElementById('reels-list');
+  if (!el) return;
+  try {
+    const res = await fetch(`${WORKER}/reference-reels`);
+    const { reels = [] } = await res.json();
+    if (!reels.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No hay reels de referencia guardados aún.</div>'; return; }
+    el.innerHTML = reels.map(r => {
+      const sLbl = getSectors().find(s=>s.value===r.sector)?.label || r.sector;
+      return `<div class="queue-item" style="margin-bottom:8px;cursor:default">
+        <div class="queue-item-meta">${esc(sLbl)}${r.url ? ` · <a href="${esc(r.url)}" target="_blank" style="color:var(--accent-l)">Ver reel ↗</a>` : ''}</div>
+        <div class="queue-item-snippet">${esc((r.transcript||'').substring(0,140))}${r.transcript&&r.transcript.length>140?'...':''}</div>
+        ${r.notes ? `<div class="queue-item-snippet" style="color:var(--accent-l);margin-top:4px">💡 ${esc(r.notes)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="color:var(--muted);font-size:12px">Error al cargar reels. Verifica que el Worker esté actualizado.</div>`; }
 }
 
 // ── STYLE PROFILE (auto-generado cada 5 aprobados) ────────────────────
