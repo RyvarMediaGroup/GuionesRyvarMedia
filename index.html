@@ -160,17 +160,18 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
 #admin-auth-error{color:var(--red);font-size:12px;margin-top:8px;min-height:16px}
 
 /* ── ADMIN PANEL ── */
-#admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200}
-#admin-overlay.visible{display:block}
-#admin-panel{position:fixed;top:0;right:0;width:440px;height:100vh;background:#0f0f18;border-left:1px solid var(--border);display:none;flex-direction:column;z-index:201;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+#admin-overlay{display:none}
+#admin-panel{position:fixed;inset:0;background:#0f0f18;border-top:1px solid var(--border);display:none;flex-direction:column;z-index:201}
 #admin-panel.visible{display:flex}
-.admin-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.admin-header{display:flex;align-items:center;justify-content:space-between;padding:18px 6%;border-bottom:1px solid var(--border);flex-shrink:0}
 .admin-header h2{font-size:15px;font-weight:700}
-.admin-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.admin-tab{padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--font);letter-spacing:.4px}
+.admin-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;padding:0 6%}
+.admin-tab{padding:11px 16px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--font);letter-spacing:.4px}
 .admin-tab:hover{color:var(--text)}
 .admin-tab.active{color:var(--accent-l);border-bottom-color:var(--accent)}
-.admin-body{flex:1;overflow-y:auto;padding:20px 22px}
+.admin-body{flex:1;overflow-y:auto;padding:28px 6%}
+.admin-two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+@media(max-width:700px){.admin-two-col{grid-template-columns:1fr}}
 .admin-section{display:none}
 .admin-section.active{display:block}
 .admin-section h3{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text)}
@@ -265,6 +266,17 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
       <div class="panel-title">✦ Nuevo Guión</div>
 
       <div class="field">
+        <label>Modo</label>
+        <div class="type-pills" id="modo-pills">
+          <div class="pill active" onclick="selectModo(this,'completo')">Completo</div>
+          <div class="pill" onclick="selectModo(this,'hook')">Hook</div>
+          <div class="pill" onclick="selectModo(this,'desarrollo')">Desarrollo</div>
+          <div class="pill" onclick="selectModo(this,'cta')">CTA</div>
+        </div>
+        <input type="hidden" id="modo-gen" value="completo">
+      </div>
+
+      <div class="field">
         <label>Tipo de guión</label>
         <div class="type-pills" id="tipo-pills">
           <div class="pill active" onclick="selectTipo(this,'marca')">Marca</div>
@@ -285,7 +297,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           <option value="youtube">YouTube Shorts</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="field-duracion">
         <label>Duración</label>
         <select id="duracion"></select>
       </div>
@@ -298,7 +310,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
         <textarea id="tema" placeholder="Describe el tema, mensaje o producto..." oninput="updateCount(this,'tema-count')"></textarea>
         <div class="char-count"><span id="tema-count">0</span> caracteres</div>
       </div>
-      <div class="field">
+      <div class="field" id="field-elementos">
         <label>Elementos a incluir</label>
         <label class="checkbox-item"><input type="checkbox" id="inc-hook" checked> Hook de apertura fuerte</label>
         <label class="checkbox-item"><input type="checkbox" id="inc-cta" checked> CTA claro al final</label>
@@ -309,6 +321,10 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
         <label>Notas adicionales</label>
         <textarea id="notas" placeholder="Tono, palabras a evitar, referencias..." style="min-height:64px" oninput="updateCount(this,'notas-count')"></textarea>
         <div class="char-count"><span id="notas-count">0</span> caracteres</div>
+      </div>
+      <div class="field" id="field-hook-ref" style="display:none">
+        <label>Hook de referencia <span style="color:var(--muted);font-weight:400;text-transform:none">(opcional — pega el hook ya generado)</span></label>
+        <textarea id="hook-ref" placeholder="Pega aquí el hook para que el desarrollo / CTA sea coherente..." style="min-height:60px"></textarea>
       </div>
       <button class="btn btn-primary" id="btn-gen" onclick="generarGuion()">⚡ Generar Guión</button>
       <div id="example-count"></div>
@@ -326,6 +342,7 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
           <div class="script-meta" id="out-chips"></div>
           <div style="display:flex;gap:8px;flex-shrink:0">
             <button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copiar</button>
+            <button class="btn btn-ghost btn-sm" onclick="avoidStyle()" title="Marcar este estilo para que la IA lo evite en el futuro" style="color:#F59E0B;border-color:rgba(245,158,11,.3)">⚠ Evitar estilo</button>
             <button class="btn btn-ghost btn-sm" onclick="sendToReview()">📤 Revisión</button>
           </div>
         </div>
@@ -428,12 +445,33 @@ label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bot
         <label>Estructura temporal</label>
         <textarea id="ps-estructura" rows="2"></textarea>
       </div>
-      <button class="btn btn-primary" style="width:100%" onclick="savePromptRules()">💾 Guardar y sincronizar</button>
+      <div class="admin-two-col">
+        <button class="btn btn-primary" style="grid-column:1/-1" onclick="savePromptRules()">💾 Guardar y sincronizar reglas globales</button>
+      </div>
       <div id="ps-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
+
       <div class="divider"></div>
-      <h3>Perfiles de estilo aprendidos</h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Se generan automáticamente cada 5 guiones aprobados por sector.</p>
-      <div id="ps-profiles" style="font-size:12px;color:var(--muted)">Se cargan al aprobar guiones.</div>
+      <div class="admin-two-col">
+        <div>
+          <h3>Reglas por sector</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Instrucciones específicas para un sector. La IA las seguirá siempre que genere para ese sector.<br><span style="color:var(--accent-l)">Ej: "Nunca mencionar el restaurante hasta los últimos 3 segundos."</span></p>
+          <div class="field">
+            <label>Sector</label>
+            <select id="ps-sector-sel" onchange="loadSectorRule()"></select>
+          </div>
+          <div class="field">
+            <label>Reglas (una por línea)</label>
+            <textarea id="ps-sector-rules" rows="6" placeholder="Nunca mencionar el establecimiento hasta los últimos 3 segundos.&#10;El hook debe ser sobre la experiencia sensorial, no el lugar.&#10;..."></textarea>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="saveSectorRule()">💾 Guardar regla</button>
+          <div id="ps-rule-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
+        </div>
+        <div>
+          <h3>Perfiles de estilo aprendidos</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Se generan automáticamente cada 5 guiones aprobados. Resumen de patrones que funcionan por sector.</p>
+          <div id="ps-profiles" style="font-size:12px;color:var(--muted)">Se actualizan al aprobar guiones.</div>
+        </div>
+      </div>
     </div>
 
     <!-- CONFIG -->
@@ -582,8 +620,29 @@ function selectTipo(el, val) {
   document.getElementById('tipo-guion').value = val;
 }
 
+// ─── MODO PILLS ───────────────────────────────────────────────────────────────
+function selectModo(el, modo) {
+  document.querySelectorAll('#modo-pills .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('modo-gen').value = modo;
+  const showDuracion  = modo === 'completo' || modo === 'desarrollo';
+  const showElementos = modo === 'completo' || modo === 'desarrollo';
+  const showHookRef   = modo === 'desarrollo' || modo === 'cta';
+  document.getElementById('field-duracion').style.display  = showDuracion  ? '' : 'none';
+  document.getElementById('field-elementos').style.display = showElementos ? '' : 'none';
+  document.getElementById('field-hook-ref').style.display  = showHookRef   ? '' : 'none';
+  const labels = {
+    completo:   '⚡ Generar Guión Completo',
+    hook:       '⚡ Generar Hook',
+    desarrollo: '⚡ Generar Desarrollo',
+    cta:        '⚡ Generar CTA',
+  };
+  document.getElementById('btn-gen').textContent = labels[modo];
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-let sessionTimer = null;
+let sessionTimer   = null;
+let isAdminSession = false;
 
 document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
@@ -611,6 +670,7 @@ function doLogin() {
 
 function doLogout() {
   clearInterval(sessionTimer);
+  isAdminSession = false;
   sessionHistory = [];
   renderHistory();
   document.getElementById('login-screen').classList.remove('hidden');
@@ -637,6 +697,7 @@ const pad = n => String(n).padStart(2,'0');
 
 // ─── ADMIN AUTH ───────────────────────────────────────────────────────────────
 function openAdminAuth() {
+  if (isAdminSession) { openAdmin(); return; } // ya autenticado, abrir directo
   document.getElementById('admin-auth-modal').classList.add('visible');
   document.getElementById('admin-auth-input').value = '';
   document.getElementById('admin-auth-error').textContent = '';
@@ -648,6 +709,7 @@ function closeAdminAuth() {
 function verifyAdminAuth() {
   if (document.getElementById('admin-auth-input').value === getAdminPw()) {
     closeAdminAuth();
+    isAdminSession = true;
     document.getElementById('admin-btn').classList.add('show');
     openAdmin();
   } else {
@@ -935,7 +997,7 @@ function openReviewModal(idx) {
   document.getElementById('rm-title').textContent = item.cliente || 'Guión';
   document.getElementById('rm-meta').textContent =
     `${sectorLabel} · ${item.tipo==='numeros'?'Números':'Marca'} · ${item.plataforma||''} · ${new Date(item.generatedAt||Date.now()).toLocaleString('es-DO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`;
-  document.getElementById('rm-body').innerHTML = buildScriptHtml(g, item.tipo);
+  document.getElementById('rm-body').innerHTML = buildScriptHtml(g, item.tipo, item.modo||'completo');
   document.getElementById('review-modal').classList.add('visible');
 }
 function closeReviewModal() {
@@ -988,6 +1050,7 @@ function updateExampleCount() {
 }
 
 async function generarGuion() {
+  const modo      = document.getElementById('modo-gen').value;
   const tipo      = document.getElementById('tipo-guion').value;
   const sector    = document.getElementById('sector').value;
   const plataforma= document.getElementById('plataforma').value;
@@ -995,6 +1058,7 @@ async function generarGuion() {
   const cliente   = document.getElementById('cliente').value.trim();
   const tema      = document.getElementById('tema').value.trim();
   const notas     = document.getElementById('notas').value.trim();
+  const hookRef   = document.getElementById('hook-ref').value.trim();
   const incHook   = document.getElementById('inc-hook').checked;
   const incCta    = document.getElementById('inc-cta').checked;
   const incStat   = document.getElementById('inc-estadistica').checked;
@@ -1016,11 +1080,55 @@ async function generarGuion() {
   const pr = getPromptRules();
   const hooksPrompt = tipo==='numeros' ? pr.hookNumeros : pr.hookMarca;
 
+  // Reglas específicas del sector configuradas en Prompt Studio
+  const sectorRulesAll = store.get('ryvar_sector_rules') || {};
+  const sectorRules    = sectorRulesAll[sector] || '';
+
+  // Estilos a evitar (localStorage fallback hasta que D1 esté disponible)
+  const avoidLocal = (store.get('ryvar_avoid_styles') || [])
+    .filter(a => a.sector===sector && a.tipo===tipo)
+    .slice(-5)
+    .map(a => `• Hook a evitar: ${a.guion?.hook||''}`)
+    .join('\n');
+
   document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
   // Obtener ejemplos de D1 mientras se muestra el loader
   const ejemplos = await getExamples(sector, tipo);
+
+  // Construir prompt y formato JSON según el modo
+  const ctxBase = `${pr.identidad}
+CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
+${sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : ''}
+${avoidLocal ? `ESTILOS A EVITAR (no usar estos patrones — no funcionaron):\n${avoidLocal}` : ''}
+${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (calibra estilo, no copies):\n${ejemplos}` : ''}`;
+
+  const modoConfig = {
+    completo: {
+      systemExtra: `${hooksPrompt}\n${pr.estructura}`,
+      jsonFormat:  `{"hook":"texto del hook","hook_apellido":"segundo golpe (solo tipo números, sino vacío)","cuerpo":"desarrollo completo listo para leer en cámara","cta":"llamado a la acción exacto","filmacion":["sugerencia 1","sugerencia 2","sugerencia 3"],"edicion":["sugerencia 1","sugerencia 2","sugerencia 3"],"duracion_estimada":"X-Y segundos"}`,
+      instruccion: 'Genera el guión completo.',
+    },
+    hook: {
+      systemExtra: `${hooksPrompt}`,
+      jsonFormat:  tipo==='numeros'
+        ? `{"hook":"primer golpe — detiene el scroll en 0-3s","hook_apellido":"segundo golpe que escala sin repetir"}`
+        : `{"hook":"hook que detiene el scroll en 0-3s","hook_apellido":""}`,
+      instruccion: `Genera SOLO el hook${tipo==='numeros'?' (primer golpe + segundo golpe)':''}.`,
+    },
+    desarrollo: {
+      systemExtra: pr.estructura,
+      jsonFormat:  `{"cuerpo":"desarrollo completo listo para leer en cámara, sin hook ni CTA"}`,
+      instruccion: `Genera SOLO el desarrollo/cuerpo del guión.${hookRef?' El hook ya está escrito — continúa desde él sin repetirlo.':''}`,
+    },
+    cta: {
+      systemExtra: '',
+      jsonFormat:  `{"cta":"llamado a la acción exacto y poderoso"}`,
+      instruccion: `Genera SOLO el CTA (llamado a la acción).${hookRef?' El contexto del guión es el siguiente hook/desarrollo — el CTA debe ser coherente con él.':''}`,
+    },
+  };
+  const mc = modoConfig[modo];
 
   try {
     const res = await fetch(WORKER, {
@@ -1028,15 +1136,23 @@ async function generarGuion() {
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 2000,
-        system: `${pr.identidad}
-${hooksPrompt}
-${pr.estructura}
-CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
-${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (mismo sector y tipo — calibra estilo, no copies):\n${ejemplos}` : ''}
+        max_tokens: modo==='completo' ? 2000 : 600,
+        system: `${ctxBase}
+${mc.systemExtra}
 RESPONDE SOLO con este JSON sin markdown ni texto extra:
-{"hook":"texto del hook","hook_apellido":"segundo golpe (solo tipo números, sino vacío)","cuerpo":"desarrollo completo listo para leer en cámara","cta":"llamado a la acción exacto","filmacion":["sugerencia 1","sugerencia 2","sugerencia 3"],"edicion":["sugerencia 1","sugerencia 2","sugerencia 3"],"duracion_estimada":"X-Y segundos"}`,
-        messages:[{role:'user', content:`Cliente: ${cliente||'Sin especificar'}\nSector: ${sectorLabel}\nPlataforma: ${platLabel}\nDuración: ${durLabel}\nTipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}\nTema: ${tema}${notas?'\nNotas: '+notas:''}\nElementos: ${elementos}\n\nSolo el JSON.`}]
+${mc.jsonFormat}`,
+        messages:[{role:'user', content:`${mc.instruccion}
+Cliente: ${cliente||'Sin especificar'}
+Sector: ${sectorLabel}
+Plataforma: ${platLabel}
+${modo==='completo'||modo==='desarrollo' ? `Duración objetivo: ${durLabel}` : ''}
+Tipo: ${tipo==='numeros'?'NÚMEROS':'MARCA'}
+Tema: ${tema}
+${notas?'Notas: '+notas:''}
+${hookRef?'Hook/contexto de referencia: '+hookRef:''}
+${modo==='completo'?'Elementos: '+elementos:''}
+
+Solo el JSON.`}]
       })
     });
 
@@ -1049,7 +1165,7 @@ RESPONDE SOLO con este JSON sin markdown ni texto extra:
     try { g = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
     catch { g = {hook:raw.substring(0,200), hook_apellido:'', cuerpo:raw, cta:'', filmacion:[], edicion:[], duracion_estimada:durLabel}; }
 
-    lastGuionData = {guion:g, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
+    lastGuionData = {guion:g, modo, tipo, sector, plataforma:platLabel, cliente, tema, generatedAt:Date.now()};
 
     const pending = store.get('ryvar_pending') || [];
     pending.push(lastGuionData);
@@ -1057,7 +1173,7 @@ RESPONDE SOLO con este JSON sin markdown ni texto extra:
     updatePendingBadge();
     syncPendingToKV('add', lastGuionData).catch(()=>{});
 
-    renderGuion(g, cliente, platLabel, sectorLabel, tipo, durLabel);
+    renderGuion(g, cliente, platLabel, sectorLabel, tipo, durLabel, modo);
     addToHistory(lastGuionData);
 
   } catch(err) {
@@ -1076,18 +1192,24 @@ function highlight(id) {
   setTimeout(() => el.style.borderColor = '', 2000);
 }
 
-function buildScriptHtml(g, tipo) {
+function buildScriptHtml(g, tipo, modo='completo') {
   let html = '';
   const sec = (label, text, dotClass, isHook) => !text ? '' : `
     <div class="script-section">
       <div class="section-label"><span class="section-dot ${dotClass}"></span>${label}</div>
       <div class="${isHook?'hook-text':'script-text'}">${esc(text)}</div>
     </div>`;
-  html += sec('Hook — 0-3 segundos', g.hook, 'dot-hook', true);
-  if (g.hook_apellido && tipo==='numeros') html += sec('Segundo Golpe', g.hook_apellido, 'dot-hook', true);
-  html += sec('Desarrollo', g.cuerpo, 'dot-dev', false);
-  html += sec('CTA', g.cta, 'dot-cta', false);
-  if ((g.filmacion?.length||0) + (g.edicion?.length||0) > 0) {
+  if (modo === 'hook' || modo === 'completo') {
+    html += sec('Hook — 0-3 segundos', g.hook, 'dot-hook', true);
+    if (g.hook_apellido && tipo==='numeros') html += sec('Segundo Golpe', g.hook_apellido, 'dot-hook', true);
+  }
+  if (modo === 'desarrollo' || modo === 'completo') {
+    html += sec('Desarrollo', g.cuerpo, 'dot-dev', false);
+  }
+  if (modo === 'cta' || modo === 'completo') {
+    html += sec('CTA', g.cta, 'dot-cta', false);
+  }
+  if (modo === 'completo' && (g.filmacion?.length||0) + (g.edicion?.length||0) > 0) {
     html += `<div class="script-section"><div class="section-label"><span class="section-dot dot-prod"></span>Producción</div><div class="prod-block">`;
     if (g.filmacion?.length) {
       html += `<div class="prod-subtitle">Filmación</div>`;
@@ -1102,16 +1224,21 @@ function buildScriptHtml(g, tipo) {
   return html;
 }
 
-function renderGuion(g, cliente, plataforma, sector, tipo, durLabel) {
+const MODO_LABEL = { completo:'Completo', hook:'Hook', desarrollo:'Desarrollo', cta:'CTA' };
+
+function renderGuion(g, cliente, plataforma, sector, tipo, durLabel, modo='completo') {
   document.getElementById('empty-state').style.display = 'none';
   const out = document.getElementById('script-output');
   out.classList.add('visible');
+  const modoChip = `<span class="chip" style="background:rgba(124,58,237,.25);border-color:var(--accent)">${MODO_LABEL[modo]||modo}</span>`;
+  const durChip  = (modo==='completo'||modo==='desarrollo') ? `<span class="chip">${esc(g.duracion_estimada||durLabel)}</span>` : '';
   document.getElementById('out-chips').innerHTML = `
+    ${modoChip}
     <span class="chip">${tipo==='numeros'?'Números':'Marca'}</span>
     <span class="chip">${esc(sector)}</span>
     <span class="chip">${esc(plataforma)}</span>
-    <span class="chip">${esc(g.duracion_estimada||durLabel)}</span>`;
-  document.getElementById('out-content').innerHTML = buildScriptHtml(g, tipo);
+    ${durChip}`;
+  document.getElementById('out-content').innerHTML = buildScriptHtml(g, tipo, modo);
   out.scrollIntoView({behavior:'smooth'});
 }
 
@@ -1141,7 +1268,7 @@ function renderHistory() {
     const title = (item.tema||item.cliente||'Sin tema').substring(0,28);
     return `<div class="history-card ${i===0?'active':''}" onclick="loadFromHistory(${item.generatedAt})">
       <div class="history-card-title">${esc(title)}${vLabel}</div>
-      <div class="history-card-meta">${esc(item.plataforma||'')} · ${new Date(item.generatedAt).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="history-card-meta">${MODO_LABEL[item.modo]||'Completo'} · ${item.tipo==='numeros'?'Núm':'Marca'} · ${new Date(item.generatedAt).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</div>
     </div>`;
   }).join('');
 }
@@ -1151,7 +1278,7 @@ function loadFromHistory(ts) {
   lastGuionData = item;
   const sectorLabel = getSectors().find(s=>s.value===item.sector)?.label || item.sector || '—';
   const durObj = getDuraciones().find(d=>d.value===(item.duracion||'')) || {label:''};
-  renderGuion(item.guion, item.cliente, item.plataforma, sectorLabel, item.tipo, durObj.label);
+  renderGuion(item.guion, item.cliente, item.plataforma, sectorLabel, item.tipo, durObj.label, item.modo||'completo');
   document.querySelectorAll('.history-card').forEach(c=>c.classList.remove('active'));
   event.currentTarget.classList.add('active');
 }
@@ -1217,6 +1344,7 @@ function doFirstAccess() {
     return;
   }
   closeFirstAccess();
+  isAdminSession = true;
   // Entrar al app en modo admin (sin sesión de empleado)
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
@@ -1249,6 +1377,8 @@ async function loadRemoteConfig() {
     if (data.sectorCtx)                            store.set('ryvar_sector_ctx_all', data.sectorCtx);
     if (data.promptRules && Object.keys(data.promptRules).length)
                                                    store.set('ryvar_prompt_rules',  data.promptRules);
+    if (data.sectorRules && Object.keys(data.sectorRules).length)
+                                                   store.set('ryvar_sector_rules',  data.sectorRules);
     if (data.pending)                              store.set('ryvar_pending',       data.pending);
 
     // Si KV está vacío (primer uso), subir los defaults para que todos los dispositivos los tengan
@@ -1314,6 +1444,7 @@ function loadPromptStudio() {
   document.getElementById('ps-hook-numeros').value = r.hookNumeros;
   document.getElementById('ps-hook-marca').value   = r.hookMarca;
   document.getElementById('ps-estructura').value   = r.estructura;
+  loadSectorRuleSel();
 }
 
 async function savePromptRules() {
@@ -1338,6 +1469,69 @@ async function savePromptRules() {
     st.textContent = 'Guardado localmente (sin conexión)';
   }
   setTimeout(() => st.textContent = '', 4000);
+}
+
+// ── EVITAR ESTILO ─────────────────────────────────────────────────────
+async function avoidStyle() {
+  if (!lastGuionData) return;
+  const avoid = store.get('ryvar_avoid_styles') || [];
+  // Evitar duplicados
+  if (avoid.find(a => a.generatedAt === lastGuionData.generatedAt)) {
+    showToast('Ya marcado para evitar'); return;
+  }
+  avoid.push({...lastGuionData, avoidedAt: Date.now()});
+  if (avoid.length > 150) avoid.splice(0, avoid.length - 150);
+  store.set('ryvar_avoid_styles', avoid);
+  try {
+    await fetch(WORKER + '/avoid', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({...lastGuionData, avoidedAt: Date.now()})
+    });
+  } catch(e) { console.warn('Avoid D1 sync failed, saved locally'); }
+  showToast('⚠ Estilo marcado para evitar');
+}
+
+// ── REGLAS POR SECTOR ─────────────────────────────────────────────────
+function loadSectorRuleSel() {
+  const sel = document.getElementById('ps-sector-sel');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona sector —</option>';
+  getSectors().forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value; o.textContent = s.label;
+    if (s.value === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (prev) loadSectorRule();
+}
+function loadSectorRule() {
+  const sector = document.getElementById('ps-sector-sel').value;
+  const rules = store.get('ryvar_sector_rules') || {};
+  document.getElementById('ps-sector-rules').value = sector ? (rules[sector] || '') : '';
+}
+async function saveSectorRule() {
+  const sector = document.getElementById('ps-sector-sel').value;
+  if (!sector) return;
+  const rule = document.getElementById('ps-sector-rules').value.trim();
+  const rules = store.get('ryvar_sector_rules') || {};
+  if (rule) rules[sector] = rule; else delete rules[sector];
+  store.set('ryvar_sector_rules', rules);
+  const st = document.getElementById('ps-rule-status');
+  try {
+    await fetch(WORKER + '/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sectorRules: rules })
+    });
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Regla guardada y sincronizada';
+  } catch(e) {
+    st.style.color = 'var(--muted)';
+    st.textContent = 'Guardado localmente (sin conexión)';
+  }
+  setTimeout(() => st.textContent = '', 3500);
 }
 
 // ── STYLE PROFILE (auto-generado cada 5 aprobados) ────────────────────
