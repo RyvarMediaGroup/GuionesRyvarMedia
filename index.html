@@ -1024,23 +1024,33 @@ let sessionHistory = [];
 async function getExamples(sector, tipo) {
   try {
     const res = await fetch(`${WORKER}/examples?sector=${encodeURIComponent(sector)}&tipo=${encodeURIComponent(tipo)}`);
-    const { examples=[], profile=null } = await res.json();
+    const { examples=[], profile=null, avoid=[] } = await res.json();
     let out = '';
     if (profile) out += `PERFIL DE ESTILO APRENDIDO (patrones de tus guiones aprobados):\n${profile}\n\n`;
     if (examples.length) {
+      out += `GUIONES APROBADOS (calibra estilo, no copies):\n`;
       out += examples.map(e =>
-        `EJEMPLO APROBADO:\nHook: ${e.hook}\n${e.hook_apellido?'Segundo golpe: '+e.hook_apellido+'\n':''}Desarrollo: ${(e.cuerpo||'').substring(0,220)}\nCTA: ${e.cta||''}`
-      ).join('\n\n---\n\n');
+        `• Hook: ${e.hook}${e.hook_apellido?' / Segundo: '+e.hook_apellido:''}\n  Desarrollo: ${(e.cuerpo||'').substring(0,200)}\n  CTA: ${e.cta||''}`
+      ).join('\n\n');
+    }
+    // Avoid styles desde D1 (reemplaza el fallback local)
+    if (avoid.length) {
+      out += `\n\nESTILOS A EVITAR (estos no funcionaron — no usar estos patrones):\n`;
+      out += avoid.map(a => `• Hook a evitar: ${a.hook}`).join('\n');
     }
     return out;
   } catch(e) {
     // Fallback a localStorage si D1 no responde
     const approved = store.get('ryvar_approved') || [];
-    return approved
+    const avoidLocal = store.get('ryvar_avoid_styles') || [];
+    let out = approved
       .filter(a => a.sector===sector && a.tipo===tipo)
       .slice(-5)
-      .map(a => `EJEMPLO APROBADO:\nHook: ${a.guion.hook}\n${a.guion.hook_apellido?'Segundo golpe: '+a.guion.hook_apellido+'\n':''}Desarrollo: ${(a.guion.cuerpo||'').substring(0,220)}\nCTA: ${a.guion.cta||''}`)
-      .join('\n\n---\n\n');
+      .map(a => `• Hook: ${a.guion.hook}${a.guion.hook_apellido?' / Segundo: '+a.guion.hook_apellido:''}\n  Desarrollo: ${(a.guion.cuerpo||'').substring(0,200)}\n  CTA: ${a.guion.cta||''}`)
+      .join('\n\n');
+    const avoidFiltered = avoidLocal.filter(a => a.sector===sector && a.tipo===tipo).slice(-4);
+    if (avoidFiltered.length) out += `\n\nESTILOS A EVITAR:\n` + avoidFiltered.map(a=>`• ${a.guion?.hook||''}`).join('\n');
+    return out;
   }
 }
 function updateExampleCount() {
@@ -1084,13 +1094,6 @@ async function generarGuion() {
   const sectorRulesAll = store.get('ryvar_sector_rules') || {};
   const sectorRules    = sectorRulesAll[sector] || '';
 
-  // Estilos a evitar (localStorage fallback hasta que D1 esté disponible)
-  const avoidLocal = (store.get('ryvar_avoid_styles') || [])
-    .filter(a => a.sector===sector && a.tipo===tipo)
-    .slice(-5)
-    .map(a => `• Hook a evitar: ${a.guion?.hook||''}`)
-    .join('\n');
-
   document.getElementById('loading-overlay').classList.add('visible');
   document.getElementById('btn-gen').disabled = true;
 
@@ -1101,8 +1104,7 @@ async function generarGuion() {
   const ctxBase = `${pr.identidad}
 CONTEXTO DEL SECTOR "${sectorLabel}": ${sectorCtx}
 ${sectorRules ? `REGLAS OBLIGATORIAS PARA ESTE SECTOR (seguir sin excepción):\n${sectorRules}` : ''}
-${avoidLocal ? `ESTILOS A EVITAR (no usar estos patrones — no funcionaron):\n${avoidLocal}` : ''}
-${ejemplos ? `GUIONES APROBADOS DE REFERENCIA (calibra estilo, no copies):\n${ejemplos}` : ''}`;
+${ejemplos || ''}`;
 
   const modoConfig = {
     completo: {
@@ -1405,8 +1407,9 @@ async function syncConfigToKV() {
       body: JSON.stringify({
         sectors:     getSectors(),
         duraciones:  getDuraciones(),
-        sectorCtx:   store.get('ryvar_sector_ctx_all')  || {},
-        promptRules: store.get('ryvar_prompt_rules')    || {},
+        sectorCtx:   store.get('ryvar_sector_ctx_all') || {},
+        promptRules: store.get('ryvar_prompt_rules')   || {},
+        sectorRules: store.get('ryvar_sector_rules')   || {},
       })
     });
   } catch(e) { console.warn('Sync KV falló'); }
