@@ -916,7 +916,7 @@ async function verifyAdminAuth() {
 function openAdmin() {
   document.getElementById('admin-overlay').classList.add('visible');
   document.getElementById('admin-panel').classList.add('visible');
-  loadQueueList();
+  refreshQueueFromKV();
   renderSectorsList();
   renderDuracionesList();
   updateApprovedCount();
@@ -938,7 +938,7 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'cola')      loadQueueList();
+  if (tab === 'cola')      refreshQueueFromKV();
   if (tab === 'prompt')   loadPromptStudio();
   if (tab === 'reels')    { loadReelSectorSel(); loadReelsList(); }
   if (tab === 'overlays') { loadOverlayRules(); loadOverlayExSectorSel(); loadOverlayFilterSel(); }
@@ -1246,6 +1246,18 @@ function updatePendingBadge() {
   const badge = document.getElementById('pending-badge');
   badge.textContent = n || '';
   badge.classList.toggle('show', n > 0);
+}
+
+async function refreshQueueFromKV() {
+  try {
+    const res  = await fetch(WORKER + '/config');
+    const data = await res.json();
+    if (data.pending && Array.isArray(data.pending)) {
+      store.set('ryvar_pending', data.pending);
+      updatePendingBadge();
+    }
+  } catch(e) { /* sin conexión — usar localStorage */ }
+  loadQueueList();
 }
 
 function loadQueueList() {
